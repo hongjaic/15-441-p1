@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
     /* finally, loop waiting for input and then write it back */
     while (1)
     {
-        printf("%d\n", nfds);
+        //printf("%d\n", nfds);
         /* temp fds to maintain state of each of the select function calls */
         temp_rfds = rfds;
         temp_wfds = wfds;
@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
                      */
                     if (nfds < MAX_CONNECTIONS) 
                     {
-                        printf("Trying to accept a client\n");
+                        //printf("Trying to accept a client\n");
 
                         cli_size = sizeof(cli_addr);
                         client_sock = accept(sock, (struct sockaddr *) &cli_addr, &cli_size);
@@ -191,7 +191,7 @@ int main(int argc, char* argv[])
                          */
                         nfds++;
 
-                        printf("Client connection accepted: fd %d\n", client_sock);
+                        //printf("Client connection accepted: fd %d\n", client_sock);
                     } 
                     else 
                     {
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
                          * already reached the max number of connections, do
                          * nothing
                          */
-                        printf("Client connect number at MAX. Refused/deferred client connection request.\n");
+                        //printf("Client connect number at MAX. Refused/deferred client connection request.\n");
                     }
                 }
                 else
@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
                     readret = 0;
                     writeret = 0;
 
-                    printf("Trying to receive from a client: fd %d\n", i);
+                    //printf("Trying to receive from a client: fd %d\n", i);
 
                     /* 
                      * For this client, try to receive more only if the buf
@@ -251,7 +251,7 @@ int main(int argc, char* argv[])
                          */
                         if (readret == 0)
                         {
-                            printf("No more to read.\n");
+                            //printf("No more to read.\n");
                             FD_CLR(i, &rfds);
                             FD_CLR(i, &wfds);
 
@@ -261,7 +261,7 @@ int main(int argc, char* argv[])
                                 fprintf(stderr, "Error closing client socket.\n");
                                 return EXIT_FAILURE;
                             }
-                            printf("Connection close sucessful: fd %d\n", i);
+                            //printf("Connection close sucessful: fd %d\n", i);
 
                             nfds--;
                             continue;
@@ -283,14 +283,14 @@ int main(int argc, char* argv[])
                          */
                         connections[i].bufAvailable = 0;
 
-                        printf("Receive complete: fd %d\n", i);
+                        //printf("Receive complete: fd %d\n", i);
                     }
                 }
             }
 
             if (FD_ISSET(i, &temp_wfds))
             {
-                printf("Trying to send to a client: fd %d\n", i);
+                //printf("Trying to send to a client: fd %d\n", i);
 
                 writeret = 0;
 
@@ -342,7 +342,7 @@ int main(int argc, char* argv[])
                 connections[i].bufindex = 0;
                 connections[i].bufAvailable = 1;
 
-                printf("Send complete: fd %d\n", i);
+                //printf("Send complete: fd %d\n", i);
             }
         }
     }
