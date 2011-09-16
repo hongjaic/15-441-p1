@@ -238,33 +238,33 @@ int es_send_error_handle(int err)
     switch (err)
     {
         case EACCES:
-            // fall through
+            /* fall through */
         case EAGAIN:
-            // fall through
+            /* fall through */
         case EBADF:
-            // fall through
+            /* fall through */
         case EDESTADDRREQ:
-            // fall through
+            /* fall through */
         case EFAULT:
-            // fall through
+            /* fall through */
         case EINTR:
-            // fall through
+            /* fall through */
         case EINVAL:
-            // fall through
+            /* fall through */
         case EISCONN:
-            // fall through
+            /* fall through */
         case EMSGSIZE:
-            // fall through
+            /* fall through */
         case ENOBUFS:
-            // fall through
+            /* fall through */
         case ENOMEM:
-            // fall through
+            /* fall through */
         case ENOTCONN:
-            // fall through
+            /* fall through */
         case ENOTSOCK:
-            // fall through
+            /* fall through */
         case EOPNOTSUPP:
-            // fall through
+            /* fall through */
         case EPIPE:
             break;
         case ECONNRESET:
@@ -291,31 +291,31 @@ int es_connect_error_handle(int err)
     switch (err)
     {
         case EACCES:
-            // fall through
+            /* fall through */
         case EPERM:
-            // fall through
+            /* fall through */
         case EADDRINUSE:
-            // fall through
+            /* fall through */
         case EAFNOSUPPORT:
-            // fall through
+            /* fall through */
         case EAGAIN:
-            // fall through
+            /* fall through */
         case EALREADY:
-            // fall through
+            /* fall through */
         case EBADF:
-            // fall through
+            /* fall through */
         case ECONNREFUSED:
-            // fall through
+            /* fall through */
         case EFAULT:
-            // fall through
+            /* fall through */
         case EINPROGRESS:
-            // fall through
+            /* fall through */
         case EINTR:
-            // fall through
+            /* fall through */
         case EISCONN:
-            // fall through
+            /* fall through */
         case ENETUNREACH:
-            // fall through
+            /* fall through */
         case ENOTSOCK:
             break;
         default:
