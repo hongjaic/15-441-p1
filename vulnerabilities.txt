@@ -1,0 +1,23 @@
+CS 15-441
+
+Author: Hong Jai Cho <hongjaic@andrew.cmu.edu>
+
+Vulnerabilities:
+
+1) Connection reset by client
+It seems that the server prioritizes incoming connections (connectiont to
+accept) over IO requests. Meaning, that when a lot of connections come in at
+the same time or consecutively, the server seems to handle the accepts first,
+rather than initializing IO with already established connections. I think this
+could be very inefficient.
+
+2) signal(SIGPIPE, SIG_IGN)
+I have handled broken pipe errors by have the server to just ignore them. This
+seems to be fine right now, but having the signal ignored, rather than
+properly handling it could cause problems potentially.
+
+3) Speed
+This might be a problem that is common to all servers tha uses the select()
+function to multiplex. When I tested with thousands of connections (up to 10
+thousand), many of the connections timed out. The server of course, was
+intact.

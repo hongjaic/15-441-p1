@@ -1,0 +1,23 @@
+CS 15-441
+
+Author: Hong Jai Cho <hongjaic@andrew.cmu.edu>
+
+Test execution plans:
+
+1) Run mulitple instances of the python test script
+To test that the server is trully robust when a huge number of connections are
+made, I ran a multiple number of test scripts at once. No matter how many
+instances of the python script I ran, the server did not fail; however, the
+client failed due to timeouts (because the server defers connections after 1024
+cnnections. This was just a stress test.
+
+2) Have the echo_client send data larger than the buffer size
+This test ultimately failed. However, I think the reason was because the
+echo_client expects all things to come back in one send.
+
+3) Robust client: netcat
+I tried sending large files (10MB+) to the server using netcat. The command
+that I used is "nc hostaddr portnum < filename". With multiple instances of
+netcat sending such larger files worked beautifully. This test indicates that my
+server is able to handle files that are much larger than the buffer (also
+multiple of them at once).
