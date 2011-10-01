@@ -706,7 +706,7 @@ int main(int argc, char* argv[])
                             connections[i].responseIndex = 0;
                         }
 
-                        printf("RESPONSE: %s\n", connections[i].response);
+                        //printf("RESPONSE: %s\n", connections[i].response);
 
                         if (connections[i].responseLeft >= BUF_SIZE)
                         {
@@ -720,8 +720,8 @@ int main(int argc, char* argv[])
                         writeret = send(i, connections[i].response + connections[i].responseIndex, sendSize, MSG_DONTWAIT);
                         //printf("responseIndex: %d\nwriteret: %d\n", connections[i].responseIndex, (int)writeret);
                         //printf("response: %s\n", connections[i].response);
-                        printPairs(connections[i].request->headers);
-                        printf("STATUS: %d\n", connections[i].request->status);
+                        //printPairs(connections[i].request->headers);
+                        //printf("STATUS: %d\n", connections[i].request->status);
                         //printf("\n");
                         if (writeret < 0)
                         {
@@ -801,7 +801,7 @@ int main(int argc, char* argv[])
                                     connections[i].responseIndex = strlen(connections[i].response);
                                 }
 
-                                printf("RESPONSE: %s\n", connections[i].response);
+                                //printf("RESPONSE: %s\n", connections[i].response);
 
                                 writeret = send(i, connections[i].response, connections[i].responseIndex, MSG_DONTWAIT);
 
@@ -846,9 +846,9 @@ int main(int argc, char* argv[])
                                     connections[i].responseIndex = 0;
                                 }
 
-                                printPairs(connections[i].request->headers);
-                                printf("%s\n", connections[i].request->uri);
-                                printf("RESPONSE: %s\n", connections[i].response);
+                                //printPairs(connections[i].request->headers);
+                                //printf("%s\n", connections[i].request->uri);
+                                //printf("RESPONSE: %s\n", connections[i].response);
 
                                 if (connections[i].responseLeft <= BUF_SIZE)
                                 {
