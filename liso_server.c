@@ -629,7 +629,7 @@ int main(int argc, char* argv[])
                         connections[i].responseIndex = 0;
                     }
 
-                    printf("RESPONSE: %s", connections[i].response);
+                    //printf("RESPONSE: %s", connections[i].response);
 
                     if (connections[i].responseLeft >= BUF_SIZE)
                     {
@@ -677,8 +677,8 @@ int main(int argc, char* argv[])
                     connections[i].responseIndex += writeret;
                     connections[i].responseLeft -= writeret;
 
-                    printPairs((connections[i].request)->headers);
-                    printf("STATUS: %d\n", connections[i].request->status);
+                    //printPairs((connections[i].request)->headers);
+                    //printf("STATUS: %d\n", connections[i].request->status);
                     //printf("responseIndex: %d\nwriteret: %d\n", connections[i].responseIndex, (int)writeret);
                     //printf("response: %s\n", connections[i].response);
                     if (connections[i].responseLeft == 0)
