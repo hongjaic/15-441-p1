@@ -63,7 +63,6 @@ int build_response(es_connection *connection, char *response)
     if (strcmp((connection->request)->method, HEAD) == 0 || strcmp((connection->request)->method, GET) == 0)
     {
         content_size = statbuf.st_size;
-        printf("%d\n", content_size);
         connection->sendContentSize = content_size;
     }
 
