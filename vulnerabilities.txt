@@ -2,6 +2,9 @@ CS 15-441
 
 Author: Hong Jai Cho <hongjaic@andrew.cmu.edu>
 
+----------------------------------------------------------------------------------
+CP1
+----------------------------------------------------------------------------------
 Vulnerabilities:
 
 1) Connection reset by client
@@ -21,3 +24,18 @@ This might be a problem that is common to all servers tha uses the select()
 function to multiplex. When I tested with thousands of connections (up to 10
 thousand), many of the connections timed out. The server of course, was
 intact.
+----------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------
+CP2
+----------------------------------------------------------------------------------
+Vulnerabilities:
+
+After doing so rigorous tests, I find out that with high number of
+concurrency, ab got disconnect by peer errors (though server still alive).
+This, I am assuming is due to timeouts.
+
+Right now, my POST request handling is a little buggy. I did not consider that
+the packets could be delayed, and just ignored requests that did not show
+somewhat ideal behaviors.
+----------------------------------------------------------------------------------

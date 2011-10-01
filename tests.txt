@@ -2,6 +2,9 @@ CS 15-441
 
 Author: Hong Jai Cho <hongjaic@andrew.cmu.edu>
 
+----------------------------------------------------------------------------------
+CP1
+----------------------------------------------------------------------------------
 Test execution plans:
 
 1) Run mulitple instances of the python test script
@@ -21,3 +24,34 @@ that I used is "nc hostaddr portnum < filename". With multiple instances of
 netcat sending such larger files worked beautifully. This test indicates that my
 server is able to handle files that are much larger than the buffer (also
 multiple of them at once).
+----------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------
+CP2
+----------------------------------------------------------------------------------
+Test execution plans:
+
+1) Web Browser
+For basic functionality of the liso_server, I used ordinary web browers to
+send requests. When I saw my static liso page show up, I knew that the basic
+functionality was working.
+
+2) Apache Bench
+I used the Apache Bench to test the robustness of the server. Using apache, I
+tested for GETs and POSTs with high number of clients and high number of
+concurrency. Follwing are the commands that I used.
+
+ab -n 10000 -c 1000 http://localhost:port/
+ab -n 10000 -c 1000 -p filename http://localhost:port
+
+The test results varied every time.
+
+3) Netcat
+I sent a request using netcat and tried to see if I was getting the correct
+response.
+
+nc localhost port < replay.test > replay.out
+
+4) Web-Sniffer (web-sniffer.net)
+Web sniffer provided a very handy webapp for testing the functionalities.
+----------------------------------------------------------------------------------
