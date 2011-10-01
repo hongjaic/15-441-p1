@@ -8,13 +8,13 @@
 #                                                                              #
 ################################################################################
 
-default: echo_server echo_client
+default: lisod echo_client
 
-echo_server:
-	@gcc echo_server.c es_error_handler.c -o echo_server -Wall -Werror
+lisod:
+	@gcc liso_server.c es_error_handler.c liso_hash.c http_parser.c liso_file_io.c liso_logger.c -o lisod -Wall -Werror
 
 echo_client:
 	@gcc echo_client.c -o echo_client -Wall -Werror
 
 clean:
-	@rm echo_server echo_client
+	@rm lisod echo_client

@@ -74,8 +74,15 @@ void printErrorMessage(int err)
     fprintf(stderr, "ERROR: %s -- %s\n", wrappers[err].errname, wrappers[err].errmsg);
 }
 
-int es_socket_error_handle(int err)
+void buildErrorPair(int err, char *errorBuf)
 {
+    sprintf(errorBuf, "%s -- %s", wrappers[err].errname, wrappers[err].errmsg);
+}
+
+int es_socket_error_handle(int err, int port, FILE* fp)
+{
+    char error[100];
+
     switch (err)
     {
         case EACCES:
@@ -95,17 +102,24 @@ int es_socket_error_handle(int err)
         case EPROTONOSUPPORT:
             break;
         default:
-            fprintf(stderr, "ERROR: Unidentified error.\n");
+            //fprintf(stderr, "ERROR: Unidentified error.\n");
+            liso_logger_log("ERROR", " ", "Unidentified error", port, fp);
             return -1;
     }
 
-    printErrorMessage(err);
+    buildErrorPair(err, error);
+
+    liso_logger_log("ERROR", " ", error, port, fp);
+
+    //printErrorMessage(err);
 
     return -1;
 }
 
-int es_bind_error_handle(int err)
+int es_bind_error_handle(int err, int port, FILE *fp)
 {
+    char error[100];
+    
     switch (err)
     {
         case EADDRINUSE:
@@ -117,17 +131,24 @@ int es_bind_error_handle(int err)
         case ENOTSOCK:
             break;
         default:
-            fprintf(stderr, "ERROR: Unidentified error.\n");
+            //fprintf(stderr, "ERROR: Unidentified error.\n");
+            liso_logger_log("ERROR", " ", "Unidentified error", port, fp);
             return -1;
     }
 
-    printErrorMessage(err);
+    //printErrorMessage(err);
     
+    buildErrorPair(err, error);
+
+    liso_logger_log("ERROR", " ", error, port, fp);
+
     return -1;
 }
 
-int es_listen_error_handle(int err)
+int es_listen_error_handle(int err, int port, FILE *fp)
 {
+    char error[100];
+    
     switch (err)
     {
         case EADDRINUSE:
@@ -139,17 +160,24 @@ int es_listen_error_handle(int err)
         case EOPNOTSUPP:
             break;
         default:
-            fprintf(stderr, "ERROR: Unidentified error.\n");
+            //fprintf(stderr, "ERROR: Unidentified error.\n");
+            liso_logger_log("ERROR", " ", "Unidentified error", port, fp);
             return -1;
     }
 
-    printErrorMessage(err);
+    //printErrorMessage(err);
     
+    buildErrorPair(err, error);
+
+    liso_logger_log("ERROR", " ", error, port, fp);
+
     return -1;
 }
 
-int es_accept_error_handle(int err)
+int es_accept_error_handle(int err, int port, FILE *fp)
 {
+    char error[100];
+    
     switch (err)
     {
         case EAGAIN:
@@ -179,17 +207,23 @@ int es_accept_error_handle(int err)
         case EPERM:
             break;
         default:
-            fprintf(stderr, "ERROR: Unidentified error.\n");
+            //fprintf(stderr, "ERROR: Unidentified error.\n");
+            liso_logger_log("ERROR", " ", "Unidentified error", port, fp);
             return -1;
     }
 
-    printErrorMessage(err);
+    //printErrorMessage(err);
+    
+    buildErrorPair(err, error);
+
+    liso_logger_log("ERROR", " ", error, port, fp);
     
     return -1;
 }
 
-int es_recv_error_handle(int err)
+int es_recv_error_handle(int err, int port, FILE *fp)
 {
+    char error[100];
     int stayAlive = 0;
 
     switch (err)
@@ -220,19 +254,25 @@ int es_recv_error_handle(int err)
             stayAlive = 1;
             break;
         default:
-            fprintf(stderr, "ERROR: Unidentified error.\n");
+            //fprintf(stderr, "ERROR: Unidentified error.\n");
+            liso_logger_log("ERROR", " ", "Unidentified error", port, fp);
             return -1;
     }
 
-    printErrorMessage(err);
+    //printErrorMessage(err);
+    
+    buildErrorPair(err, error);
+
+    liso_logger_log("ERROR", " ", error, port, fp);
     
     if (stayAlive == 1)
         return 1;
     return -1;
 }
 
-int es_send_error_handle(int err)
+int es_send_error_handle(int err, int port, FILE *fp)
 {
+    char error[100];
     int stayAlive = 0;
 
     switch (err)
@@ -275,19 +315,26 @@ int es_send_error_handle(int err)
             stayAlive = 1;
             break;
         default:
-            fprintf(stderr, "ERROR: Unidentified error.\n");
+            //fprintf(stderr, "ERROR: Unidentified error.\n");
+            liso_logger_log("ERROR", " ", "Unidentified error", port, fp);
             return -1;
     }
 
-    printErrorMessage(err);
+    //printErrorMessage(err);
+    
+    buildErrorPair(err, error);
+
+    liso_logger_log("ERROR", " ", error, port, fp);
     
     if (stayAlive == 1)
         return 1;
     return -1;
 }
 
-int es_connect_error_handle(int err)
+int es_connect_error_handle(int err, int port, FILE *fp)
 {
+    char error[100];
+    
     switch (err)
     {
         case EACCES:
@@ -319,11 +366,16 @@ int es_connect_error_handle(int err)
         case ENOTSOCK:
             break;
         default:
-            fprintf(stderr, "ERROR: Unidentified error.\n");
+            //fprintf(stderr, "ERROR: Unidentified error.\n");
+            liso_logger_log("ERROR", " ", "Unidentified error", port, fp);
             return -1;
     }
+    
+    buildErrorPair(err, error);
 
-    printErrorMessage(err);
+    liso_logger_log("ERROR", " ", error, port, fp);
+    
+    //printErrorMessage(err);
     
     return -1;
 }

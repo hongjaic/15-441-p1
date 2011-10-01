@@ -7,11 +7,33 @@
  *  A struct to maintain the state of a connection.
  */
 
-#define RW_BUF_SIZE 4096
+#ifndef ES_CONNECTION_H
+#define ES_CONNECTION_H
+#include "http_request.h"
+
+#define RW_BUF_SIZE     8192
+#define MAX_URI_LENGTH  2048
+#define MAX_DIR_LENGTH    2304
 
 typedef struct es_connection {
     int bufindex;
     char buf[RW_BUF_SIZE];
     int bufAvailable;
+    int requestOverflow;
+    int hasRequestHeaders;
+    int maxExceeded;
+    int sentResponseHeaders;
+    int iindex;
+    int postfinish;
+    off_t oindex;
+    off_t ioIndex;
+    int sendContentSize;
+    int responseIndex;
+    int responseLeft;
+    char *nextData;
+    char response[RW_BUF_SIZE];
+    char dir[MAX_DIR_LENGTH];
+    http_request *request;
 } es_connection;
 
+#endif

@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
+#include "liso_logger.h"
 
 #define HASH_SIZE   200
 
@@ -29,11 +30,11 @@ typedef struct errnoWrappers
 errnoWrappers wrappers[HASH_SIZE];
 
 void es_error_handler_setup();
-int es_socket_error_handle(int err);
-int es_bind_error_handle(int err);
-int es_listen_error_handle(int err);
-int es_accept_error_handle(int err);
-int es_recv_error_handle(int err);
-int es_send_error_handle(int err);
-int es_connect_error_handle(int err);
+int es_socket_error_handle(int err, int port, FILE *fp);
+int es_bind_error_handle(int err, int port, FILE *fp);
+int es_listen_error_handle(int err, int port, FILE *fp);
+int es_accept_error_handle(int err, int port, FILE *fp);
+int es_recv_error_handle(int err, int port, FILE *fp);
+int es_send_error_handle(int err, int port, FILE *fp);
+int es_connect_error_handle(int err, int port, FILE *fp);
 void printErrorMessage(int err);
