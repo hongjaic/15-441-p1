@@ -310,6 +310,7 @@ int main(int argc, char* argv[])
 
                     memset(buf, 0, BUF_SIZE);
 
+                    //printf("client: %d\n", i);
                     //printf("BUFIDNEXBEFORERECV: %d\n", connections[i].bufindex);
                     readret = recv(i, buf, BUF_SIZE - connections[i].bufindex, MSG_DONTWAIT);
                     //printf("DIFF: %d\n", BUF_SIZE - connections[i].bufindex);
@@ -373,8 +374,11 @@ int main(int argc, char* argv[])
 
                         if (noDataRead == 0)
                         {
+                            //printf("bufindex: %d\n", connections[i].bufindex);
                             memcpy(connections[i].buf + connections[i].bufindex, buf, readret);
                             connections[i].bufindex += readret;
+
+                            //printf("char: %c\n", *(connections[i].buf + connections[i].bufindex));
 
                             if (connections[i].hasRequestHeaders == 0)
                             {
@@ -400,7 +404,9 @@ int main(int argc, char* argv[])
 
                                         determine_status(&(connections[i]));
 
-                                        printPairs(connections[i].request->headers);
+                                        //printPairs(connections[i].request->headers);
+
+                            //printf("char2: %c\n", *(next_data + 4));
                                         //printf("%d\n", connections[i].request->status);
 
                                         //printf((connections[i].request)->method);
@@ -411,6 +417,7 @@ int main(int argc, char* argv[])
                                         //printf("\n");
                                     }
 
+                                    //printf("%ld\n", (long)next_data - (long)connections[i].buf);
                                     if (next_data + 4 == ((connections[i].buf) + BUF_SIZE))
                                     {
                                         memset(connections[i].buf, 0, BUF_SIZE);
@@ -418,12 +425,15 @@ int main(int argc, char* argv[])
                                     }
                                     else
                                     {
+                                        //printf("fool\n");
                                         offset = (next_data + 4) - connections[i].buf;
                                         memset(connections[i].buf, 0, BUF_SIZE);
                                         memcpy(connections[i].buf, buf + offset, BUF_SIZE - offset);
                                         connections[i].bufindex = BUF_SIZE - offset;
+                                        //printf("buffuckingindex: %d\n", connections[i].bufindex);
+                                        //printf("status: %d\n", connections[i].request->status);
+                                        //printf("char3: %c\n", *(connections[i].buf));
                                     }
-
 
                                     memset(buf, 0, BUF_SIZE);
 
@@ -431,11 +441,6 @@ int main(int argc, char* argv[])
                                     {
                                         if (connections[i].postfinish == 0)
                                         {
-                                            if (connections[i].bufindex < atoi(get_value((connections[i].request)->headers, "content-length")) - connections[i].iindex) 
-                                            {
-                                                (connections[i].request)->status = 500;
-                                                FD_SET(i, &wfds);
-                                            }
                                             if ((connections[i].request)->status == 200)
                                             {
 
@@ -457,9 +462,9 @@ int main(int argc, char* argv[])
 
                                                 connections[i].iindex += writeSize;
 
-                                                if (writeSize == BUF_SIZE)
+                                                if (writeSize == connections[i].bufindex)
                                                 {
-                                                    memset(connections[i].buf, 0, BUF_SIZE);
+                                                    memset(connections[i].buf, 0, connections[i].bufindex);
                                                     connections[i].bufindex = 0;
                                                 }
                                                 else
@@ -492,7 +497,7 @@ int main(int argc, char* argv[])
                                 else
                                 {
                                     //printf("Read didn't fill the buffer.\n");
-                                    if ((next_data = strstr(connections[i].buf, "\r\n\r\n")) != NULL)// && (next_data = strstr(connections[i].buf, "\r\n\r\n")) != NULL)
+                                    if ((next_data = strstr(connections[i].buf, "\r\n\r\n")) != NULL)
                                     {
                                         parse_request(connections[i].buf, request_line, headers);
                                         parse_request_line(request_line, connections[i].request);
@@ -502,31 +507,7 @@ int main(int argc, char* argv[])
                                         sprintf(connections[i].dir, "%s%s", www, (connections[i].request)->uri);
                                         determine_status(&(connections[i]));
 
-                                        if (strcmp(POST, (connections[i].request)->method) == 0)
-                                        {
-                                            if ((connections[i].request)->status == 200)
-                                            {
-                                                if (atoi(get_value((connections[i].request)->headers, "content-length")) != 0)
-                                                {
-                                                    if (*(connections[i].buf + connections[i].bufindex) == 0)
-                                                    {
-                                                        //printf("fucking error caught\n");
-                                                        (connections[i].request)->status = 500;
-                                                        FD_SET(i, &wfds);
-                                                    }
-
-                                                    if(atoi(get_value((connections[i].request)->headers, "content-length")) > (long)connections[i].bufindex - (long)(next_data + 4)) 
-                                                    {
-                                                        //printf("shit error cuaght\n");
-                                                        (connections[i].request)->status = 500;
-                                                        FD_SET(i, &wfds);
-                                                    }
-                                                }
-                                            }
-                                        }
-
                                         offset = (next_data + 4) - connections[i].buf;
-                                        //printf("offfuckingset: %d\n", offset);
                                         memset(connections[i].buf, 0, BUF_SIZE);
                                         memcpy(connections[i].buf, buf + offset, BUF_SIZE - offset);
                                         connections[i].bufindex = connections[i].bufindex - offset;
@@ -538,24 +519,15 @@ int main(int argc, char* argv[])
                                         FD_SET(i, &wfds);
                                         (connections[i].request)->status = 400;
                                     }
+                                    
                                 }
                             }
                             else if (connections[i].hasRequestHeaders == 1)
                             {
-                                memcpy(connections[i].buf + connections[i].bufindex, buf, readret);
-                                connections[i].bufindex += readret;
-
                                 if (strcmp(POST, (connections[i].request)->method) == 0)
                                 {
                                     if (connections[i].postfinish == 0)
                                     {
-
-                                        if (connections[i].bufindex < atoi(get_value((connections[i].request)->headers, "content-length")) - connections[i].iindex) 
-                                        {
-                                            (connections[i].request)->status = 500;
-                                            FD_SET(i, &wfds);
-                                        }
-
                                         if((connections[i].request)->status == 200)
                                         {
                                             if (connections[i].iindex < 0)
@@ -574,18 +546,18 @@ int main(int argc, char* argv[])
 
                                             connections[i].iindex += writeSize;
 
-                                            if (writeSize == BUF_SIZE)
+                                            if (writeSize == connections[i].bufindex)
                                             {
                                                 memset(connections[i].buf, 0, BUF_SIZE);
                                                 connections[i].bufindex = 0;
                                             }
                                             else
                                             {
-                                                memcpy(buf, (connections[i].buf) + writeSize, connections[i].bufindex - writeSize);
+                                                memcpy(buf, connections[i].buf + writeSize, connections[i].bufindex - writeSize);
                                                 memset(connections[i].buf, 0, BUF_SIZE);
                                                 memcpy(connections[i].buf, buf, connections[i].bufindex - writeSize);
                                                 memset(buf, 0, BUF_SIZE);
-                                                connections[i].bufindex = writeSize;
+                                                connections[i].bufindex = connections[i].bufindex - writeSize;
                                             }
 
                                             if (atoi(get_value((connections[i].request)->headers, "content-length")) ==  connections[i].iindex)
@@ -619,17 +591,16 @@ int main(int argc, char* argv[])
                 //printf("Tring to Write something FUCK\n");
                 writeret = 0;
 
-                if ((connections[i].request)->status != 200)// || (connections[i].request)->status)
+                if ((connections[i].request)->status != 200)
                 {
-                    //printf("Sending error message\n");
                     if(connections[i].responseLeft == 0)
                     {
+                        determine_status(&(connections[i]));
                         build_response(&(connections[i]), connections[i].response);
                         connections[i].responseLeft = strlen(connections[i].response);
                         connections[i].responseIndex = 0;
                     }
 
-                    //printf("RESPONSE: %s", connections[i].response);
 
                     if (connections[i].responseLeft >= BUF_SIZE)
                     {
@@ -641,11 +612,6 @@ int main(int argc, char* argv[])
                     }
 
                     writeret = send(i, connections[i].response + connections[i].responseIndex, sendSize, MSG_DONTWAIT);
-                    //printf("responseIndex: %d\n", connections[i].responseIndex);
-                    //printf("response: %s\n", connections[i].response);
-                    //printf("responseLeft: %d\n", connections[i].responseLeft);
-                    //printf("i: %d\n", i);
-                    //printf("sendSize: %d\n", sendSize);
 
                     if (writeret < 0)
                     {
@@ -653,11 +619,7 @@ int main(int argc, char* argv[])
                         FD_CLR(i, &rfds);
                         FD_CLR(i, &wfds);
 
-                        //printf("before cleanup\n");
-                        //printf("errorstate\n");
-                        //printf("HTTP ERROR: %d\n", connections[i].request->status);
                         cleanup_connection(&(connections[i]));
-                        //printf("after cleanup\n");
                         close_socket(i);
 
                         // error is not client disconnection, terminate the server
@@ -677,15 +639,9 @@ int main(int argc, char* argv[])
                     connections[i].responseIndex += writeret;
                     connections[i].responseLeft -= writeret;
 
-                    //printPairs((connections[i].request)->headers);
-                    //printf("STATUS: %d\n", connections[i].request->status);
-                    //printf("responseIndex: %d\nwriteret: %d\n", connections[i].responseIndex, (int)writeret);
-                    //printf("response: %s\n", connections[i].response);
                     if (connections[i].responseLeft == 0)
                     {
-                        //printf("before clean fucking up\n");
                         cleanup_connection(&(connections[i]));
-                        //printf("after clean fuckin gup\n");
                         FD_CLR(i, &rfds);
                         FD_CLR(i, &wfds);
                         close_socket(i);
@@ -694,19 +650,14 @@ int main(int argc, char* argv[])
                 }
                 else
                 {
-                    //printf("Sending 200 response\n");
-
                     if (strcmp("POST", (connections[i].request)->method) == 0)
                     {
                         if (connections[i].responseLeft == 0)
                         {
-                            determine_status(&(connections[i]));
+                            //determine_status(&(connections[i]));
                             build_response(&(connections[i]), connections[i].response);
                             connections[i].responseLeft = strlen(connections[i].response);
-                            connections[i].responseIndex = 0;
                         }
-
-                        //printf("RESPONSE: %s\n", connections[i].response);
 
                         if (connections[i].responseLeft >= BUF_SIZE)
                         {
@@ -718,20 +669,14 @@ int main(int argc, char* argv[])
                         }
 
                         writeret = send(i, connections[i].response + connections[i].responseIndex, sendSize, MSG_DONTWAIT);
-                        //printf("responseIndex: %d\nwriteret: %d\n", connections[i].responseIndex, (int)writeret);
-                        //printf("response: %s\n", connections[i].response);
-                        //printPairs(connections[i].request->headers);
-                        //printf("STATUS: %d\n", connections[i].request->status);
-                        //printf("\n");
+                        
                         if (writeret < 0)
                         {
                             errnoSave = errno;
                             FD_CLR(i, &rfds);
                             FD_CLR(i, &wfds);
 
-                            //printf("before cleanup\n");
                             cleanup_connection(&(connections[i]));
-                            //printf("after cleanup\n");
                             close_socket(i); 
 
                             // error is not client disconnection, terminate the server
@@ -753,10 +698,7 @@ int main(int argc, char* argv[])
 
                         if (connections[i].responseLeft == 0)
                         {
-                            //printf("before wtf\n");
                             cleanup_connection(&(connections[i]));
-                            //printf("buf: %s\n", connections[i].buf);
-                            // printf("after wtf\n");
                             FD_CLR(i, &rfds);
                             FD_CLR(i, &wfds);
                             close_socket(i);
@@ -795,13 +737,10 @@ int main(int argc, char* argv[])
                             {
                                 if (connections[i].responseIndex == 0)
                                 {
-
-                                    determine_status(&(connections[i]));
+                                    //determine_status(&(connections[i]));
                                     build_response(&(connections[i]), connections[i].response);
                                     connections[i].responseIndex = strlen(connections[i].response);
                                 }
-
-                                //printf("RESPONSE: %s\n", connections[i].response);
 
                                 writeret = send(i, connections[i].response, connections[i].responseIndex, MSG_DONTWAIT);
 
@@ -839,16 +778,10 @@ int main(int argc, char* argv[])
                             {
                                 if (connections[i].responseLeft == 0)
                                 {
-
-                                    determine_status(&(connections[i]));
+                                    //determine_status(&(connections[i]));
                                     build_response(&(connections[i]), connections[i].response);
                                     connections[i].responseLeft = strlen(connections[i].response);
-                                    connections[i].responseIndex = 0;
                                 }
-
-                                //printPairs(connections[i].request->headers);
-                                //printf("%s\n", connections[i].request->uri);
-                                //printf("RESPONSE: %s\n", connections[i].response);
 
                                 if (connections[i].responseLeft <= BUF_SIZE)
                                 {
@@ -858,8 +791,6 @@ int main(int argc, char* argv[])
                                 {
                                     sendSize = BUF_SIZE;
                                 }
-
-                                //printf("%d\n", connections[i].responseIndex);
 
                                 writeret = send(i, connections[i].response + connections[i].responseIndex, sendSize, MSG_DONTWAIT);
 
@@ -873,7 +804,6 @@ int main(int argc, char* argv[])
                             }
                             else if (connections[i].sentResponseHeaders == 1)
                             {
-                                //printf("sent response headers and now trying to send file\n");
                                 if ((connections[i].request)->status == 200)
                                 {
                                     if (connections[i].ioIndex < 0)
@@ -894,7 +824,6 @@ int main(int argc, char* argv[])
 
                                     iosize = sendfile(i, filefd, &(connections[i].ioIndex), iosize);
 
-                                    //printf("iosize %d\n", iosize);
                                     if (iosize < 0)
                                     {
                                         errnoSave = errno;
