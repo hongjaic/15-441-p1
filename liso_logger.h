@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define ERROR   "ERROR"
+
 typedef struct liso_logger
 {
     FILE *loggerfd;

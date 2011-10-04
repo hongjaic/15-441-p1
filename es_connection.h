@@ -11,6 +11,7 @@
 #define ES_CONNECTION_H
 #include "http_request.h"
 
+#define BUF_SIZE        8192
 #define RW_BUF_SIZE     8192
 #define MAX_URI_LENGTH  2048
 #define MAX_DIR_LENGTH    2304
@@ -35,5 +36,8 @@ typedef struct es_connection {
     char dir[MAX_DIR_LENGTH];
     http_request *request;
 } es_connection;
+
+void init_connection(es_connection *connection);
+void cleanup_connection(es_connection *connection);
 
 #endif

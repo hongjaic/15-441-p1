@@ -39,6 +39,8 @@
 #define MAX_URI_LENGTH  2048
 #define VERSION_LENGTH  9
 
+extern char *www;
+
 void init_request(http_request *request, int clietfd);
 int http_handle_request(http_request *request);
 int build_response(es_connection *connection, char *response);
@@ -46,6 +48,7 @@ void parse_request_line(char *request_line, http_request *request);
 void parse_headers(char *headers, http_request *request);
 int parse_body(char *request, http_request *request_wrapper);
 void parse_request(char *request, char *request_line, char *headers);
+void parse_http(es_connection *connection);
 void determine_status(es_connection *connection);
 int request_method_is_implemented(char *method);
 int request_method_valid(char *method);

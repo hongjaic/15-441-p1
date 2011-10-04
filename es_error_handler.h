@@ -9,6 +9,8 @@
  *  error messages.
  */
 
+#ifndef ES_ERROR_HANDLER_H
+#define ES_ERROR_HANDLER_H
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,3 +40,5 @@ int es_recv_error_handle(int err, int port, FILE *fp);
 int es_send_error_handle(int err, int port, FILE *fp);
 int es_connect_error_handle(int err, int port, FILE *fp);
 void printErrorMessage(int err);
+
+#endif

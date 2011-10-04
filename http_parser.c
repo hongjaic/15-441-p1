@@ -19,7 +19,7 @@ int build_response(es_connection *connection, char *response)
 {
     int content_size;
     int status;
-    char *content_size_s = get_value((connection->request)->headers, "Content-Length");
+    char *content_size_s = get_value((connection->request)->headers, "content-length");
     char date[100];
     char *server = "Liso/1.0";
     char *content_type;
@@ -70,7 +70,7 @@ int build_response(es_connection *connection, char *response)
 
     generate_time(date);
 
-    if(strcmp((connection->request)->method, POST) == 0 && get_value(connection->request->headers, "Content-Length") == 0)
+    if(strcmp((connection->request)->method, POST) == 0 && get_value(connection->request->headers, "content-length") == 0)
     {
         sprintf(response, 
                 "HTTP/1.1 %d %s\r\nConnection: %s\r\nDate: %s\r\nServer: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\n\r\n",
@@ -98,10 +98,6 @@ int build_response(es_connection *connection, char *response)
     }
 
     return 1;
-}
-
-void parse_uri(char *uri, char *hostname, char *path, int *port)
-{
 }
 
 // Working
@@ -295,6 +291,17 @@ void parse_request(char *request, char *request_line, char * headers)
     {
         *headers = '\0';
     }
+}
+
+void parse_http(es_connection *connection)
+{
+    char request_line[MAXLINE];
+    char headers[MAXLINE];
+
+    parse_request(connection->buf, request_line, headers);
+    parse_request_line(request_line, connection->request);
+    parse_headers(headers, connection->request);
+    sprintf(connection->dir, "%s%s", www, connection->request->uri);
 }
 
 void determine_status(es_connection *connection)
