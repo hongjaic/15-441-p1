@@ -50,6 +50,10 @@ int build_response(es_connection *connection, char *response)
         stat(connection->dir, &statbuf);
         strftime(last_modified, 100, "%a, %d, %b, %Y, %H:%M:%s GMT", gmtime(&(statbuf.st_mtime)));
     }
+    else if (strcmp((connection->request)->method, POST) == 0)
+    {
+        generate_time(last_modified);
+    }
 
     if (content_size_s == NULL)
     {
@@ -70,16 +74,17 @@ int build_response(es_connection *connection, char *response)
 
     generate_time(date);
 
-    if(strcmp((connection->request)->method, POST) == 0 && get_value(connection->request->headers, "content-length") == 0)
+    if(strcmp((connection->request)->method, POST) == 0)// && get_value(connection->request->headers, "content-length") == 0)
     {
         sprintf(response, 
-                "HTTP/1.1 %d %s\r\nConnection: %s\r\nDate: %s\r\nServer: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\n\r\n",
+                "HTTP/1.1 %d %s\r\nConnection: %s\r\nDate: %s\r\nServer: %s\r\nContent-Type: %s\r\nLast-Modified:%s\r\n\r\n",
                 status, status_message(status),
                 "Keep-Alive",
                 date,
                 server,
-                content_size,
-                content_type
+                //content_size,
+                content_type,
+                last_modified
                 );
 
     }
@@ -152,7 +157,7 @@ void parse_headers(char *headers, http_request *request)
     char *i = headers;
     char *k;
 
-    if (*header == '\0')
+    if (*headers == '\0')
     {
         return;
     }

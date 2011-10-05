@@ -39,6 +39,7 @@
 typedef struct liso_select_engine
 {
     int sock;
+    int sock_ssl;
     fd_set rfds;
     fd_set temp_rfds;
     fd_set wfds;
@@ -53,6 +54,7 @@ typedef struct liso_select_engine
 extern liso_select_engine engine;
 extern char *www;
 extern int port;
+extern int ssl_port;
 
 int liso_engine_create(int port, char *flog, char *flock);
 int liso_engine_event_loop();

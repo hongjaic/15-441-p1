@@ -15,11 +15,10 @@ int handle_get_io(es_connection *connection, int i);
 void buffer_shift_forward(es_connection *connection, char *next_data);
 void liso_select_cleanup(int i);
 
-int fuck = 0;
-
 int liso_engine_create(int port, char *flog, char *flock)
 {
     struct sockaddr_in addr;
+    struct sockaddr_in ssl_addr;
 
     liso_logger_create(&(engine.logger), flog);
 
@@ -31,13 +30,25 @@ int liso_engine_create(int port, char *flog, char *flock)
     if (engine.sock == -1)
     {
         fprintf(stderr, "Failed creating socket.\n");
-        liso_logger_log(ERROR, "socket", "select returned -1\n", port, engine.logger.loggerfd);
+        liso_logger_log(ERROR, "socket", "Failed creating socket.\n", port, engine.logger.loggerfd);
+        exit(EXIT_FAILURE);
+    }
+
+    engine.sock_ssl = socket(PF_INET, SOCK_STREAM, 0);
+    if (engine.sock_ssl == -1)
+    {
+        fprintf(stderr, "Failed create ssl socket.\n");
+        liso_logger_log(ERROR, "socket", "Failed creating ssl socket.\n", ssl_port, engine.logger.loggerfd);
         exit(EXIT_FAILURE);
     }
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
+
+    ssl_addr.sin_family = AF_INET;
+    ssl_addr.sin_port = htons(ssl_port);
+    ssl_addr.sin_addr.s_addr = INADDR_ANY;
 
     // servers bind sockets to ports---notify the OS they accept connections
     if (bind(engine.sock, (struct sockaddr *) &addr, sizeof(addr)))
@@ -79,6 +90,8 @@ int liso_engine_event_loop()
 
     while (1)
     {
+        //printf("NFDS: %d\n", engine.nfds);
+
         engine.temp_rfds = engine.rfds;
         engine.temp_wfds = engine.wfds;
 
@@ -118,6 +131,8 @@ int liso_engine_event_loop()
                     continue;
                 }
             }
+
+            memset(engine.buf, 0, BUF_SIZE);
         }
     }
 
@@ -260,7 +275,6 @@ int liso_handle_recv(int i)
                     }
                     else
                     {
-                        while(1);
                         currConnection->request->status = 400;
                         FD_SET(i, &(engine.wfds));
                     }
@@ -308,11 +322,11 @@ int liso_handle_send(int i)
     int retval;
     int sentResponse;
     es_connection *currConnection = (&(engine.connections)[i]);
-    
+
     if (currConnection->request->status != 200)
     {
         retval =  send_response(currConnection, i);
-        
+
         if (currConnection->responseLeft == 0)
         {
             cleanup_connection(currConnection);
@@ -328,10 +342,16 @@ int liso_handle_send(int i)
         {
             retval = send_response(currConnection, i);
 
+            //printPairs(currConnection->request->headers);
+            //printf("Response: %s\n", currConnection->response);
+            //printf("ssibaloma\n");
+
             if (retval != -1)
             {
                 if (currConnection->responseLeft == 0)
                 {
+                    printf("Indiciation that response was sent.\n");
+                   //sleep(10);
                     cleanup_connection(currConnection);
                     FD_CLR(i, &(engine.rfds));
                     FD_CLR(i, &(engine.wfds));
@@ -396,7 +416,7 @@ void post_recv_phase(es_connection *connection, int i)
             {
                 connection->iindex = 0;
             }
-           
+
             content_length = atoi(get_value(connection->request->headers, "content-length"));
 
             if (content_length - connection->iindex >= connection->bufindex)
@@ -465,6 +485,7 @@ int send_response(es_connection *connection, int i)
 
     if (writeret < 0)
     {
+        printf("oh my god what the fuck\n");
         errnoSave = errno;
 
         FD_CLR(i, &(engine.rfds));
@@ -510,7 +531,7 @@ int handle_get_io(es_connection *connection, int i)
     int filefd;
     int iosize;
     int errnoSave;
-    
+
     if (connection->ioIndex < 0)
     {
         connection->ioIndex = 0;
@@ -530,7 +551,7 @@ int handle_get_io(es_connection *connection, int i)
     iosize = sendfile(i, filefd, &(connection->ioIndex), iosize);
 
     close(filefd);
-    
+
     if (iosize < 0)
     {
         errnoSave = errno;
@@ -542,13 +563,13 @@ int handle_get_io(es_connection *connection, int i)
         close_socket(i);
 
         (engine.nfds)--;
-        
+
         return -1;
     }
 
-    
+
     connection->sendContentSize -= iosize;
-    
+
     if (connection->sendContentSize == 0)
     {
         FD_CLR(i, &(engine.rfds));

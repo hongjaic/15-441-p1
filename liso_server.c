@@ -36,28 +36,29 @@
 #define MAX_CONNECTIONS 1024
 #define MAX_URI_LENGTH  2048
 
-#define USAGE "\nUsage: %s <PORT> <LOG_FILE> <LOCK_FILE> <WWW> <CGI>\n\n"
+#define USAGE "\nUsage: %s <PORT> <SSL_PORT> <LOG_FILE> <LOCK_FILE> <WWW> <CGI>\n\n"
 
 liso_select_engine engine;
 char *www;
 int port;
+int ssl_port;
 
 int main(int argc, char* argv[])
 {
     char *flog, *flock, *cgi;
 
-    if (argc != 6)
+    if (argc != 7)
     {
         fprintf(stderr, USAGE, argv[0]);
-        liso_logger_log(ERROR, "argc", "select returned -1\n", port, engine.logger.loggerfd);
         exit(EXIT_FAILURE);
     }
 
     port = atoi(argv[1]);
-    flog = argv[2];
-    flock = argv[3];
-    www = argv[4];
-    cgi = argv[5];
+    ssl_port = atoi(argv[2]);
+    flog = argv[3];
+    flock = argv[4];
+    www = argv[5];
+    cgi = argv[6];
 
     liso_engine_create(port, flog, flock);
 
