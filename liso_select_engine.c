@@ -14,11 +14,17 @@ int send_response(es_connection *connection, int i);
 int handle_get_io(es_connection *connection, int i);
 void buffer_shift_forward(es_connection *connection, char *next_data);
 void liso_select_cleanup(int i);
+void liso_close_and_cleanup(int i);
+void liso_get_ready_for_pipeline(es_connection *connection, int i);
+void liso_close_if_requested(es_connection *connection, int i);
+void SSL_init();
 
 int liso_engine_create(int port, char *flog, char *flock)
 {
     struct sockaddr_in addr;
     struct sockaddr_in ssl_addr;
+
+    SSL_init();
 
     liso_logger_create(&(engine.logger), flog);
 
@@ -29,14 +35,16 @@ int liso_engine_create(int port, char *flog, char *flock)
     engine.sock = socket(PF_INET, SOCK_STREAM, 0);
     if (engine.sock == -1)
     {
+        SSL_CTX_free(engine.ssl_context);
         fprintf(stderr, "Failed creating socket.\n");
         liso_logger_log(ERROR, "socket", "Failed creating socket.\n", port, engine.logger.loggerfd);
         exit(EXIT_FAILURE);
     }
 
-    engine.sock_ssl = socket(PF_INET, SOCK_STREAM, 0);
-    if (engine.sock_ssl == -1)
+    engine.ssl_sock = socket(PF_INET, SOCK_STREAM, 0);
+    if (engine.ssl_sock == -1)
     {
+        SSL_CTX_free(engine.ssl_context);
         fprintf(stderr, "Failed create ssl socket.\n");
         liso_logger_log(ERROR, "socket", "Failed creating ssl socket.\n", ssl_port, engine.logger.loggerfd);
         exit(EXIT_FAILURE);
@@ -53,31 +61,56 @@ int liso_engine_create(int port, char *flog, char *flock)
     // servers bind sockets to ports---notify the OS they accept connections
     if (bind(engine.sock, (struct sockaddr *) &addr, sizeof(addr)))
     {
+        SSL_CTX_free(engine.ssl_context);
         close_socket(engine.sock);
+        close_socket(engine.ssl_sock);
         fprintf(stderr, "Failed binding socket.\n");
-        liso_logger_log(ERROR, "bind", "select returned -1\n", port, engine.logger.loggerfd);
+        liso_logger_log(ERROR, "bind", "Failed binding socket.\n", port, engine.logger.loggerfd);
+        exit(EXIT_FAILURE);
+    }
+
+    if (bind(engine.ssl_sock, (struct sockaddr *) &ssl_addr, sizeof(ssl_addr)))
+    {
+        SSL_CTX_free(engine.ssl_context);
+        close_socket(engine.sock);
+        close_socket(engine.ssl_sock);
+        fprintf(stderr, "Failed binding ssl socket.\n");
+        liso_logger_log(ERROR, "bind", "Failed binding ssl socket.\n", ssl_port, engine.logger.loggerfd);
         exit(EXIT_FAILURE);
     }
 
 
     if (listen(engine.sock, 5))
     {
+        SSL_CTX_free(engine.ssl_context);
         close_socket(engine.sock);
+        close_socket(engine.ssl_sock);
         fprintf(stderr, "Error listening on socket.\n");
-        liso_logger_log(ERROR, "listen", "select returned -1\n", port, engine.logger.loggerfd);
+        liso_logger_log(ERROR, "listen", "Failed listening on socket.\n", port, engine.logger.loggerfd);
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(engine.ssl_sock, 5))
+    {
+        SSL_CTX_free(engine.ssl_context);
+        close_socket(engine.sock);
+        close_socket(engine.ssl_sock);
+        fprintf(stderr, "Error listening on ssl socket.\n");
+        liso_logger_log(ERROR, "listen", "Failed listening on ssl socket.\n", port, engine.logger.loggerfd);
         exit(EXIT_FAILURE);
     }
 
     // have the file descriptors ready for multiplexing
     FD_ZERO(&(engine.rfds));
     FD_SET(engine.sock, &(engine.rfds));
+    FD_SET(engine.ssl_sock, &(engine.rfds));
     FD_ZERO(&(engine.wfds));
 
     // current total number of file descriptors including stdin, stdout, stderr
     // and server socket
-    engine.nfds = 4;
+    engine.nfds = 5;
 
-    engine.fdmax = engine.sock;
+    engine.fdmax = engine.sock >= engine.ssl_sock ? engine.sock : engine.ssl_sock;
 
     return 1; 
 }
@@ -96,7 +129,7 @@ int liso_engine_event_loop()
         engine.temp_wfds = engine.wfds;
 
         selReturn = select(engine.fdmax + 1, &(engine.temp_rfds), &(engine.temp_wfds), NULL, NULL);
-
+        //printf("man\n");
         if (selReturn < 0)
         {
             close_socket(engine.sock);
@@ -112,8 +145,11 @@ int liso_engine_event_loop()
 
         for (i = 0; i < engine.fdmax + 1; i++)
         {
+            memset(engine.buf, 0, BUF_SIZE);
+
             if (FD_ISSET(i, &(engine.temp_rfds)))
             {
+                //printf("read phase\n");
 
                 rwval = liso_handle_recv(i);
                 if (rwval == -1)
@@ -124,6 +160,8 @@ int liso_engine_event_loop()
 
             if (FD_ISSET(i, &(engine.temp_wfds)))
             {
+                //printf("write phase\n");
+
                 rwval = liso_handle_send(i);
 
                 if (rwval == -1)
@@ -131,8 +169,6 @@ int liso_engine_event_loop()
                     continue;
                 }
             }
-
-            memset(engine.buf, 0, BUF_SIZE);
         }
     }
 
@@ -147,16 +183,19 @@ int liso_handle_recv(int i)
     char *next_data;
     es_connection *currConnection;
 
-    if (i == engine.sock)
+    if (i == engine.sock || i == engine.ssl_sock)
     {
         if (engine.nfds < MAX_CONNECTIONS - 1)
         {
+            //printf("trying to accept a client.\n");
             cli_size = sizeof(cli_addr);
             client_sock = accept(engine.sock, (struct sockaddr *) &cli_addr, &cli_size);
 
             if (client_sock < 0)
             {
+                SSL_CTX_free(engine.ssl_context);
                 close(engine.sock);
+                close(engine.ssl_sock);
                 fprintf(stderr, "Error accepting connection.\n");
                 liso_logger_log(ERROR, "accpet", "select returned -1\n", port, engine.logger.loggerfd);
                 return -1;
@@ -169,12 +208,47 @@ int liso_handle_recv(int i)
 
             init_connection(&((engine.connections)[client_sock]));
 
+            if (i == engine.ssl_sock) 
+            {
+                currConnection = &((engine.connections)[client_sock]);
+
+                currConnection->context = SSL_new(engine.ssl_context);
+
+                if (currConnection->context != NULL)
+                {
+                    if (SSL_set_fd(currConnection->context, client_sock) == 0)
+                    {
+                        printf("ssibal\n");
+                        close_socket(engine.sock);
+                        close_socket(engine.ssl_sock);
+                        SSL_free(currConnection->context);
+                        SSL_CTX_free(engine.ssl_context);
+                        fprintf(stderr, "Error creating client SSL context.\n");
+                        liso_logger_log(ERROR, "SSL_set_fd", "Error creating client SSL context.\n", ssl_port, engine.logger.loggerfd);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if (SSL_accept(currConnection->context) <= 0)
+                    {
+                        printf("dammit\n");
+                        close_socket(engine.sock);
+                        close_socket(engine.ssl_sock);
+                        SSL_free(currConnection->context);
+                        SSL_CTX_free(engine.ssl_context);
+                        fprintf(stderr, "Error creating client SSL context.\n");
+                        liso_logger_log(ERROR, "SSL_set_fd", "Error accepting (handshake) client SSL context.\n", ssl_port, engine.logger.loggerfd);
+                        exit(EXIT_FAILURE);
+                    }
+                }
+            }
+
             if (client_sock > engine.fdmax)
             {
                 engine.fdmax = client_sock;
             }
 
             (engine.nfds)++;
+            //printf("accpeted client: %d\n", client_sock);
         }
         else if (engine.nfds == MAX_CONNECTIONS -1)
         {
@@ -223,7 +297,11 @@ int liso_handle_recv(int i)
         {
             if (readret == 0)
             {
-                liso_select_cleanup(i);
+                //printf("client disconnected\n");
+                liso_close_and_cleanup(i);
+                //liso_select_cleanup(i);
+                //close_socket(i);
+                //(engine.nfds)--;
                 return -1;
             }
 
@@ -239,7 +317,10 @@ int liso_handle_recv(int i)
                 {
                     memset(engine.buf, 0, BUF_SIZE);
                     //noDataRead = 1;
-                    liso_select_cleanup(i);
+                    liso_close_and_cleanup(i);
+                    //liso_select_cleanup(i);
+                    //close_socket(i);
+                    //(engine.nfds)--;
                     return -1; 
                 }
                 else
@@ -275,6 +356,7 @@ int liso_handle_recv(int i)
                     }
                     else
                     {
+                        //printf("----------------no-----------------\n");
                         currConnection->request->status = 400;
                         FD_SET(i, &(engine.wfds));
                     }
@@ -321,6 +403,8 @@ int liso_handle_send(int i)
 {
     int retval;
     int sentResponse;
+    char *conn;
+    char *version;
     es_connection *currConnection = (&(engine.connections)[i]);
 
     if (currConnection->request->status != 200)
@@ -342,6 +426,8 @@ int liso_handle_send(int i)
         {
             retval = send_response(currConnection, i);
 
+            FD_SET(i, &(engine.rfds));
+
             //printPairs(currConnection->request->headers);
             //printf("Response: %s\n", currConnection->response);
             //printf("ssibaloma\n");
@@ -350,13 +436,27 @@ int liso_handle_send(int i)
             {
                 if (currConnection->responseLeft == 0)
                 {
-                    printf("Indiciation that response was sent.\n");
-                   //sleep(10);
-                    cleanup_connection(currConnection);
-                    FD_CLR(i, &(engine.rfds));
-                    FD_CLR(i, &(engine.wfds));
-                    close_socket(i);
-                    (engine.nfds)--;
+                    //cleanup_connection(currConnection);
+                    //FD_CLR(i, &(engine.rfds));
+                    //FD_CLR(i, &(engine.wfds));
+                    //close_socket(i);
+                    //(engine.nfds)--;
+
+                    conn = get_value(currConnection->request->headers, "connection");
+                    version = currConnection->request->version;
+
+                    if (strcmp("HTTP/1.0", version) == 0)
+                    {
+                        liso_close_and_cleanup(i);
+                    }
+                    else if (strcmp(conn, "close") == 0)
+                    {
+                        liso_close_and_cleanup(i);
+                    }
+                    else {
+                        get_ready_for_pipeline(currConnection);
+                        FD_CLR(i, &(engine.wfds));
+                    }
                 }
             }
         }
@@ -364,15 +464,33 @@ int liso_handle_send(int i)
         {
             retval = send_response(currConnection, i);
 
+            FD_SET(i, &(engine.rfds));
+
             if (retval != -1)
             {
                 if (currConnection->responseLeft == 0)
                 {
-                    cleanup_connection(currConnection);
-                    FD_CLR(i, &(engine.rfds));
-                    FD_CLR(i, &(engine.wfds));
-                    close_socket(i);
-                    (engine.nfds)--;
+                    //cleanup_connection(currConnection);
+                    //FD_CLR(i, &(engine.rfds));
+                    //FD_CLR(i, &(engine.wfds));
+                    //close_socket(i);
+                    //(engine.nfds)--;
+
+                    conn = get_value(currConnection->request->headers, "connection");
+                    version = currConnection->request->version;
+
+                    if (strcmp("HTTP/1.0", version) == 0)
+                    {
+                        liso_close_and_cleanup(i);
+                    }
+                    else if (strcmp(conn, "close") == 0)
+                    {
+                        liso_close_and_cleanup(i);
+                    }
+                    else {
+                        get_ready_for_pipeline(currConnection);
+                        FD_CLR(i, &(engine.wfds));
+                    }
                 }
             }
         }
@@ -381,12 +499,44 @@ int liso_handle_send(int i)
             if ((sentResponse = currConnection->sentResponseHeaders) == 0)
             {
                 retval = send_response(currConnection, i);
+                FD_SET(i, &(engine.rfds));
+                //printf("response probably sent: %d\n", i);
             }
             else if (sentResponse == 1)
             {
+                //printf("about to send body: %d\n", i);
                 if (currConnection->request->status == 200)
                 {
                     retval = handle_get_io(currConnection, i);
+                    FD_SET(i, &(engine.rfds));
+
+                    //printf("wat the fuck is wrong\n");
+
+                    if (retval != -1)
+                    {
+                        if (currConnection->sendContentSize == 0)
+                        {
+                            //printf("send body complete\n");
+                            fflush(stdout);
+                            conn = get_value(currConnection->request->headers, "connection");
+                            version = currConnection->request->version;
+
+                            if (strcmp("HTTP/1.0", version) == 0)
+                            {
+                                liso_close_and_cleanup(i);
+                            }
+                            else if (conn != NULL && strcmp(conn, "close") == 0)
+                            {
+                                liso_close_and_cleanup(i);
+                                //printf("shit\n");
+                            }
+                            else {
+                                get_ready_for_pipeline(currConnection);
+                                FD_CLR(i, &(engine.wfds));
+                                //printf("fuck what?\n");
+                            }
+                        }
+                    }
                 }
                 else
                 {
@@ -472,6 +622,8 @@ int send_response(es_connection *connection, int i)
         connection->responseIndex = 0;
     }
 
+    //printf("response: %s\n", connection->response);
+
     if (connection->responseLeft >= BUF_SIZE)
     {
         sendSize = BUF_SIZE;
@@ -485,7 +637,7 @@ int send_response(es_connection *connection, int i)
 
     if (writeret < 0)
     {
-        printf("oh my god what the fuck\n");
+        //printf("oh my god what the fuck\n");
         errnoSave = errno;
 
         FD_CLR(i, &(engine.rfds));
@@ -570,14 +722,14 @@ int handle_get_io(es_connection *connection, int i)
 
     connection->sendContentSize -= iosize;
 
-    if (connection->sendContentSize == 0)
-    {
-        FD_CLR(i, &(engine.rfds));
-        FD_CLR(i, &(engine.wfds));
-        cleanup_connection(connection);
-        close_socket(i);
-        (engine.nfds)--;
-    }
+    //if (connection->sendContentSize == 0)
+    //{
+    //    FD_CLR(i, &(engine.rfds));
+    //    FD_CLR(i, &(engine.wfds));
+    //    cleanup_connection(connection);
+    //    close_socket(i);
+    //    (engine.nfds)--;
+    //}
 
     return 1;
 }
@@ -598,6 +750,8 @@ void buffer_shift_forward(es_connection *connection, char *next_data)
         memcpy(connection->buf, engine.buf + offset, connection->bufindex - offset); // verify that this is correct
         connection->bufindex = connection->bufindex - offset; // check if this is actually correct
     }
+
+    //printf(connection->buf);
 }
 
 void liso_select_cleanup(int i)
@@ -606,10 +760,23 @@ void liso_select_cleanup(int i)
     FD_CLR(i, &(engine.wfds));
 
     cleanup_connection(&((engine.connections)[i]));
+}
 
+void liso_close_and_cleanup(int i)
+{
+    liso_select_cleanup(i);
     close_socket(i);
-
     (engine.nfds)--;
+}
+
+void liso_close_if_requested(es_connection *connection, int i)
+{
+    char *conn = get_value(connection->request->headers, "connection");
+
+    if (strcmp(conn, "close") == 0)
+    {
+        liso_close_and_cleanup(i);
+    }
 }
 
 int close_socket(int sock)
@@ -621,4 +788,30 @@ int close_socket(int sock)
         return 1;
     }
     return 0;
+}
+
+void SSL_init()
+{
+    SSL_load_error_strings();
+    SSL_library_init();
+
+    if ((engine.ssl_context = SSL_CTX_new(TLSv1_server_method())) == NULL)
+    {
+        liso_logger_log(ERROR, "SSL_init", "Error creating SSL context.\n", port, engine.logger.loggerfd);
+        exit(EXIT_FAILURE);
+    }
+
+    if (SSL_CTX_use_PrivateKey_file(engine.ssl_context, "../private/hongjaic.key", SSL_FILETYPE_PEM) == 0)
+    {
+        SSL_CTX_free(engine.ssl_context);
+        liso_logger_log(ERROR, "SSL_init", "Error associating private key.\n", port, engine.logger.loggerfd);
+        exit(EXIT_FAILURE);
+    }
+
+    if (SSL_CTX_use_certificate_file(engine.ssl_context, "../certs/hongjaic.crt", SSL_FILETYPE_PEM) == 0)
+    {
+        SSL_CTX_free(engine.ssl_context);
+        liso_logger_log(ERROR, "SSL_init", "Error associating certification.\n", port, engine.logger.loggerfd);
+        exit(EXIT_FAILURE);
+    }
 }

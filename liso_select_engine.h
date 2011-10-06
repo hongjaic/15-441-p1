@@ -29,7 +29,7 @@
 #include <sys/resource.h>
 #include "liso_logger.h"
 #include "liso_select_engine.h"
-
+#include <openssl/ssl.h>
 
 #define ECHO_PORT 9999
 #define BUF_SIZE 8192
@@ -38,8 +38,9 @@
 
 typedef struct liso_select_engine
 {
+    SSL_CTX *ssl_context;
     int sock;
-    int sock_ssl;
+    int ssl_sock;
     fd_set rfds;
     fd_set temp_rfds;
     fd_set wfds;

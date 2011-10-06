@@ -36,10 +36,10 @@ int build_response(es_connection *connection, char *response)
         content_size = strlen(errorhtml);
         generate_time(date);
         
-        if (status != 500)
-            sprintf(response, "HTTP/1.1 %d %s\r\nConnection: Keep-Alive\r\nDate: %s\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s", 
-                    status, status_message(status), date, content_size, errorhtml);
-        else
+        //if (status != 500)
+        //    sprintf(response, "HTTP/1.1 %d %s\r\nConnection: Keep-Alive\r\nDate: %s\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s", 
+        //            status, status_message(status), date, content_size, errorhtml);
+        //else
             sprintf(response, "HTTP/1.1 %d %s\r\nConnection: Close\r\nDate: %s\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s", 
                     status, status_message(status), date, content_size, errorhtml);
         return 0;
@@ -131,6 +131,7 @@ void parse_request_line(char *request_line, http_request *request)
         }
         else
         {
+            printf("------1------\n");
             request->status = 400;
         }
         return;
@@ -170,6 +171,7 @@ void parse_headers(char *headers, http_request *request)
         {
             if (*(i+1) != ' ')
             {
+                printf("--------2--------\n");
                 request->status = 400;
                 return;
             }
@@ -196,6 +198,7 @@ void parse_headers(char *headers, http_request *request)
         }
         else if (c == '\r')
         {
+            printf("--------3--------\n");
             request->status = 400;
             return;
         }
@@ -325,6 +328,8 @@ void determine_status(es_connection *connection)
             }
             else
             {
+                printf("--------4---------\n");
+                printf("method: %s\n", connection->request->method);
                 (connection->request)->status = 400;
             }
 
@@ -350,6 +355,7 @@ void determine_status(es_connection *connection)
             {
                 if (isdigit(*content_len) == 0)
                 {
+                    printf("--------5---------\n");
                     (connection->request)->status = 400;
                     return;
                 }
