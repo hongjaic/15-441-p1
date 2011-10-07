@@ -30,6 +30,7 @@ typedef struct es_connection {
     int postfinish;
     off_t oindex;
     off_t ioIndex;
+    int sslioIndex;
     int sendContentSize;
     int responseIndex;
     int responseLeft;

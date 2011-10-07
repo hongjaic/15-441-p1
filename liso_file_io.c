@@ -7,6 +7,30 @@
 
 #include "liso_file_io.h"
 
+
+int ssl_send_file(SSL *client_context, FILE *fp, int *offset, int size)
+{
+    int readsize;
+    int writeret = -1;
+    char buf[MAXIOSIZE];
+
+    if (fp != NULL)
+    {
+        writeret = 0;
+        fseek(fp, *offset, SEEK_SET);
+        readsize = fread(buf, 1, size, fp);
+
+        writeret = SSL_write(client_context, buf, readsize);
+        
+        if (writeret < 0)
+            return writeret;
+
+        *offset = *offset + writeret;
+    }
+
+    return writeret;
+}
+
 int send_file(int fd, char *file, int offset)
 {
     int next;
@@ -97,7 +121,11 @@ char *file_type(char *file)
     {
         file_type = "application/javascript";
     }
-    else if(strstr(file, "others") != NULL)
+    else if (strstr(file, ".png") != NULL)
+    {
+        file_type = "image/png";
+    }
+    else 
     {
         file_type = "application/octet-stream";
     }

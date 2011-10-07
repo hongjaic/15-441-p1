@@ -20,6 +20,7 @@ void init_connection(es_connection *connection)
     connection->postfinish = 0;
     connection->oindex = -1;
     connection->ioIndex = -1;
+    connection->sslioIndex = -1;
     connection->sendContentSize = 0;
     connection->responseIndex = 0;
     connection->responseLeft = 0;
@@ -45,6 +46,7 @@ void cleanup_connection(es_connection *connection)
     connection->postfinish = 0;
     connection->oindex = -1;
     connection->ioIndex = -1;
+    connection->sslioIndex = -1;
     connection->sendContentSize = 0;
     connection->responseIndex = 0;
     connection->responseLeft = 0;
@@ -67,6 +69,7 @@ void get_ready_for_pipeline(es_connection *connection)
     connection->postfinish = 0;
     connection->oindex = -1;
     connection->ioIndex = -1;
+    connection->sslioIndex = -1;
     connection->sendContentSize = 0;
     connection->responseIndex = 0;
     connection->responseLeft = 0;

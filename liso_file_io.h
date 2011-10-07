@@ -15,9 +15,11 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <openssl/ssl.h>
 
 #define MAXIOSIZE   8192
 
+int ssl_send_file(SSL *client_context, FILE *fp, int *offset, int size);
 int send_file(int fd, char *file, int offset);
 int write_file(char *file, char *buf, int offset, int size);
 char *file_type(char *file);
