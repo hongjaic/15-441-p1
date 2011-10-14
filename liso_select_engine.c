@@ -18,6 +18,8 @@ void liso_select_cleanup(int i);
 void liso_close_and_cleanup(int i);
 void liso_get_ready_for_pipeline(es_connection *connection, int i);
 void liso_close_if_requested(es_connection *connection, int i);
+void look_buffer_for_request(es_connection *connection, int i);
+void process_buffer(es_connection *connection, int i);
 void SSL_init();
 
 int liso_engine_create(int port, char *flog, char *flock)
@@ -230,7 +232,7 @@ int liso_handle_recv(int i)
             if (i == engine.ssl_sock) 
             {
                 //printf("Trying to accept SSL client\n");
-                
+
                 currConnection = &((engine.connections)[client_sock]);
 
                 currConnection->context = SSL_new(engine.ssl_context);
@@ -262,7 +264,7 @@ int liso_handle_recv(int i)
                         exit(EXIT_FAILURE);
                     }
                 }
-                
+
                 //printf("SSL client accepted: %d\n", client_sock);
             }
 
@@ -503,7 +505,7 @@ int liso_handle_recv(int i)
 
                     //if (strcmp(POST, currConnection->request->method) == 0)
                     //{
-                        post_recv_phase(currConnection, i);
+                    post_recv_phase(currConnection, i);
                     //}
                 }
                 else if (currConnection->hasRequestHeaders == 1)
@@ -593,13 +595,18 @@ int liso_handle_send(int i)
                     {
                         liso_close_and_cleanup(i);
                     }
-                    else if (strcmp(conn, "close") == 0)
+                    else if (conn != NULL && strcmp(conn, "close") == 0)
                     {
                         liso_close_and_cleanup(i);
                     }
                     else {
                         get_ready_for_pipeline(currConnection);
                         FD_CLR(i, &(engine.wfds));
+                    }
+
+                    if (currConnection->bufindex != 0)
+                    {
+                        process_buffer(currConnection, i);
                     }
                 }
             }
@@ -629,13 +636,18 @@ int liso_handle_send(int i)
                     {
                         liso_close_and_cleanup(i);
                     }
-                    else if (strcmp(conn, "close") == 0)
+                    else if (conn != NULL && strcmp(conn, "close") == 0)
                     {
                         liso_close_and_cleanup(i);
                     }
                     else {
                         get_ready_for_pipeline(currConnection);
                         FD_CLR(i, &(engine.wfds));
+                    }
+
+                    if (currConnection->bufindex != 0)
+                    {
+                        process_buffer(currConnection, i);
                     }
                 }
             }
@@ -647,7 +659,7 @@ int liso_handle_send(int i)
                 retval = send_response(currConnection, i);
                 //FD_SET(i, &(engine.rfds));
 
-            //printf("sock5: %d\n", i);
+                //printf("sock5: %d\n", i);
                 //printf("response probably sent: %d\n", i);
             }
             else if (sentResponse == 1)
@@ -659,7 +671,7 @@ int liso_handle_send(int i)
                     //printf("sent response\n");
                     //FD_SET(i, &(engine.rfds));
 
-            //printf("sock6: %d\n", i);
+                    //printf("sock6: %d\n", i);
 
                     if (retval != -1)
                     {
@@ -684,12 +696,23 @@ int liso_handle_send(int i)
                                 get_ready_for_pipeline(currConnection);
                                 FD_CLR(i, &(engine.wfds));
                             }
+
+                            if (currConnection->bufindex != 0)
+                            {
+                                //look_buffer_for_request(currConnection, i);
+
+                                //if(currConnection->request->status != 0)
+                                //{
+                                //    FD_SET(i, &(engine.wfds));
+                                //}
+                                process_buffer(currConnection, i);
+                            }
                         }
                     }
                 }
                 else
                 {
-                    //printf("STATUS WAS NOT 200\n");
+                    printf("STATUS WAS NOT 200\n");
                     cleanup_connection(currConnection);
                     FD_CLR(i, &(engine.rfds));
                     FD_CLR(i, &(engine.wfds));
@@ -744,7 +767,7 @@ void post_recv_phase(es_connection *connection, int i)
             {
                 writeSize = cgi_write(connection, writeSize);
             }
-            
+
             connection->iindex += writeSize;
 
             if (writeSize == connection->bufindex)
@@ -951,7 +974,9 @@ void buffer_shift_forward(es_connection *connection, char *next_data)
     }
     else
     {
+        memset(engine.buf, 0, BUF_SIZE);
         offset = (next_data + 4) - connection->buf;
+        memcpy(engine.buf, connection->buf, connection->bufindex);
         memset(connection->buf, 0, BUF_SIZE);
         memcpy(connection->buf, engine.buf + offset, connection->bufindex - offset); // verify that this is correct
         connection->bufindex = connection->bufindex - offset; // check if this is actually correct
@@ -994,6 +1019,68 @@ int close_socket(int sock)
         return 1;
     }
     return 0;
+}
+
+void look_buffer_for_request(es_connection *connection, int i)
+{
+    char *next_data;
+
+    if (connection->bufindex == BUF_SIZE)
+    {
+        if ((next_data = strstr(connection->buf, "\r\n\r\n")) == NULL)
+        {
+            connection->request->status = 500;
+            FD_SET(i, &(engine.wfds));
+        }
+    }
+
+    if ((next_data = strstr(connection->buf, "\r\n\r\n")) != NULL)
+    {
+        parse_http(connection);
+        connection->hasRequestHeaders = 1;
+        determine_status(connection);
+
+        if (strstr(connection->request->uri, "/cgi/"))
+        {
+            cgi_init(connection);
+        }
+    }
+    else
+    {
+        connection->request->status = 400;
+        FD_SET(i, &(engine.wfds));
+    }
+
+    if (next_data != NULL)
+    {
+        buffer_shift_forward(connection, next_data);
+    }
+}
+
+void process_buffer(es_connection *connection, int i)
+{
+    if (connection->hasRequestHeaders == 0)
+    {
+        look_buffer_for_request(connection, i);
+
+        if (connection->request->status != 200 && connection->request->status != 0)
+        {
+            FD_SET(i, &(engine.wfds));
+        }
+
+        post_recv_phase(connection, i);
+    }
+    else if (connection->hasRequestHeaders == 1)
+    {
+        if (strcmp(POST, connection->request->method) == 0)
+        {
+            post_recv_phase(connection, i);
+        }
+        else
+        {
+            FD_SET(i, &(engine.wfds));
+        }
+    }
 }
 
 void SSL_init()
