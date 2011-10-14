@@ -30,6 +30,8 @@
 #include "liso_logger.h"
 #include "liso_select_engine.h"
 #include <openssl/ssl.h>
+#include "liso_signal.h"
+#include "liso_cgi.h"
 
 #define ECHO_PORT 9999
 #define BUF_SIZE 8192

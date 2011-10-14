@@ -38,6 +38,8 @@ typedef struct es_connection {
     char response[RW_BUF_SIZE];
     char dir[MAX_DIR_LENGTH];
     http_request *request;
+    int stdin_pipe[2];
+    int stdout_pipe[2];
 } es_connection;
 
 void init_connection(es_connection *connection);

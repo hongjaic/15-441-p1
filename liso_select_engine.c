@@ -124,13 +124,14 @@ int liso_engine_event_loop()
 
     while (1)
     {
-        printf("NFDS: %d\n", engine.nfds);
+        //printf("NFDS: %d\n", engine.nfds);
 
         engine.temp_rfds = engine.rfds;
         engine.temp_wfds = engine.wfds;
 
+        //printf("block here?\n");
         selReturn = select(engine.fdmax + 1, &(engine.temp_rfds), &(engine.temp_wfds), NULL, NULL);
-        //printf("man\n");
+        //printf("nope\n");
         if (selReturn < 0)
         {
             close_socket(engine.sock);
@@ -146,6 +147,7 @@ int liso_engine_event_loop()
 
         for (i = 0; i < engine.fdmax + 1; i++)
         {
+            //printf("i in main loop: %d\n", i);
             memset(engine.buf, 0, BUF_SIZE);
 
             if (FD_ISSET(i, &(engine.temp_rfds)))
@@ -165,8 +167,10 @@ int liso_engine_event_loop()
 
                 rwval = liso_handle_send(i);
 
+                //printf("wrote\n");
                 if (rwval == -1)
                 {
+                    //printf("ssibal\n");
                     continue;
                 }
             }
@@ -190,19 +194,19 @@ int liso_handle_recv(int i)
     {
         if (engine.nfds < MAX_CONNECTIONS - 1)
         {
-            printf("trying to accept a client.\n");
+            //printf("trying to accept a client.\n");
             cli_size = sizeof(cli_addr);
 
             if (i == engine.sock)
             {
                 client_sock = accept(engine.sock, (struct sockaddr *) &cli_addr, &cli_size);
-                printf("accept happend: %d\n", client_sock);
+                //printf("accept happend: %d\n", client_sock);
             }
             else if (i == engine.ssl_sock)
             {
                 client_sock = accept(engine.ssl_sock, (struct sockaddr *) &cli_addr, &cli_size);
-                printf("accept happend ssl: %d\n", client_sock);
-                printf("STDIN FD: %d\n", fileno(stdin));
+                //printf("accept happend ssl: %d\n", client_sock);
+                //printf("STDIN FD: %d\n", fileno(stdin));
             }
 
             if (client_sock < 0)
@@ -217,7 +221,7 @@ int liso_handle_recv(int i)
             }
 
             FD_SET(client_sock, &(engine.rfds));
-            printf("sock: %d\n", client_sock);
+            //printf("sock: %d\n", client_sock);
 
             //memset(engine.buf, 0, BUF_SIZE);
 
@@ -225,7 +229,7 @@ int liso_handle_recv(int i)
 
             if (i == engine.ssl_sock) 
             {
-                printf("Trying to accept SSL client\n");
+                //printf("Trying to accept SSL client\n");
                 
                 currConnection = &((engine.connections)[client_sock]);
 
@@ -235,7 +239,7 @@ int liso_handle_recv(int i)
                 {
                     if (SSL_set_fd(currConnection->context, client_sock) == 0)
                     {
-                        printf("ssibal\n");
+                        //printf("ssibal\n");
                         close_socket(engine.sock);
                         close_socket(engine.ssl_sock);
                         SSL_free(currConnection->context);
@@ -247,8 +251,8 @@ int liso_handle_recv(int i)
 
                     if ((returnnum = SSL_accept(currConnection->context)) <= 0)
                     {
-                        printf("dammit: %d\n", returnnum);
-                        printf("sslerror: %d\n", SSL_get_error(currConnection->context, returnnum));
+                        //printf("dammit: %d\n", returnnum);
+                        //printf("sslerror: %d\n", SSL_get_error(currConnection->context, returnnum));
                         close_socket(engine.sock);
                         close_socket(engine.ssl_sock);
                         SSL_free(currConnection->context);
@@ -259,7 +263,7 @@ int liso_handle_recv(int i)
                     }
                 }
                 
-                printf("SSL client accepted: %d\n", client_sock);
+                //printf("SSL client accepted: %d\n", client_sock);
             }
 
             if (client_sock > engine.fdmax)
@@ -268,7 +272,7 @@ int liso_handle_recv(int i)
             }
 
             (engine.nfds)++;
-            printf("accpeted client: %d\n", client_sock);
+            //printf("accpeted client: %d\n", client_sock);
         }
         else if (engine.nfds == MAX_CONNECTIONS -1)
         {
@@ -296,7 +300,7 @@ int liso_handle_recv(int i)
                 {
                     if (SSL_set_fd(currConnection->context, client_sock) == 0)
                     {
-                        printf("ssibal\n");
+                        //printf("ssibal\n");
                         close_socket(engine.sock);
                         close_socket(engine.ssl_sock);
                         SSL_free(currConnection->context);
@@ -308,7 +312,7 @@ int liso_handle_recv(int i)
 
                     if (SSL_accept(currConnection->context) <= 0)
                     {
-                        printf("dammit\n");
+                        //printf("dammit\n");
                         close_socket(engine.sock);
                         close_socket(engine.ssl_sock);
                         SSL_free(currConnection->context);
@@ -322,7 +326,7 @@ int liso_handle_recv(int i)
 
             FD_SET(client_sock, &(engine.rfds));
             FD_SET(client_sock, &(engine.wfds));
-            printf("sock2: %d\n", client_sock);
+            //printf("sock2: %d\n", client_sock);
 
             if (client_sock > engine.fdmax)
             {
@@ -338,6 +342,7 @@ int liso_handle_recv(int i)
     }
     else
     {
+        //printf("entering\n");
         noDataRead = 0;
         readret = 0;
 
@@ -351,15 +356,20 @@ int liso_handle_recv(int i)
         }
         else
         {
-            readret = recv(i, engine.buf, BUF_SIZE - currConnection->bufindex, MSG_DONTWAIT);
+            //printf("why is it blocking\n");
+            //printf("oh no: %d\n", BUF_SIZE - currConnection->bufindex);
+            readret = recv(i, engine.buf, BUF_SIZE - currConnection->bufindex, 0);
+            //printf("crap\n");
         }
 
         if (currConnection->request->status == 200 || currConnection->request->status == 0)
         {
+            //printf("what is going on\n");
             if (currConnection->context == NULL)
             {
                 if (readret == 0)
                 {
+                    //printf("readret returned 0\n");
                     //printf("client disconnected\n");
                     liso_close_and_cleanup(i);
                     //liso_select_cleanup(i);
@@ -370,10 +380,12 @@ int liso_handle_recv(int i)
 
                 if (readret == -1)
                 {
+                    //printf("readret returned -1\n");
                     errnoSave = errno;
 
                     if (errnoSave == EINVAL && BUF_SIZE - currConnection->bufindex == 0)
                     {
+                        //printf("no data is read\n");
                         noDataRead = 1;
                     }
                     else if (errnoSave == ECONNRESET)
@@ -405,8 +417,8 @@ int liso_handle_recv(int i)
                     }
                     else 
                     {
-                        printf("ERROR NUM: %d %d\n", SSL_get_error(currConnection->context, readret), SSL_ERROR_ZERO_RETURN);
-                        printf("CLIENT DISCONNECTED\n");
+                        //printf("ERROR NUM: %d %d\n", SSL_get_error(currConnection->context, readret), SSL_ERROR_ZERO_RETURN);
+                        //printf("CLIENT DISCONNECTED\n");
                         liso_close_and_cleanup(i);
                         return -1;
                     }
@@ -415,7 +427,7 @@ int liso_handle_recv(int i)
 
                 if (readret < 0)
                 {
-                    printf("ssibal inside ssl portion\n");
+                    //printf("ssibal inside ssl portion\n");
                     if (SSL_get_error(currConnection->context, readret) == SSL_ERROR_ZERO_RETURN)
                     {
                         liso_close_and_cleanup(i);
@@ -428,15 +440,18 @@ int liso_handle_recv(int i)
                     }
                     else
                     {
-                        printf("HAHAH\n");
+                        //printf("HAHAH\n");
                         liso_close_and_cleanup(i);
                         return -1;
                     }
                 }
             }
 
-            if (noDataRead == 0)
+            //printf("bufidex of currConnection: %d\n", currConnection->bufindex);
+
+            if (noDataRead == 0)// || currConnection->bufindex != 0)
             {
+                //printf("data is read\n");
                 memcpy(currConnection->buf + currConnection->bufindex, engine.buf, readret);
                 currConnection->bufindex += readret;
 
@@ -456,6 +471,11 @@ int liso_handle_recv(int i)
                         parse_http(currConnection);
                         currConnection->hasRequestHeaders = 1;
                         determine_status(currConnection);
+
+                        if (strstr(currConnection->request->uri, "/cgi/")) // check with wolf if this is correct
+                        {
+                            cgi_init(currConnection);
+                        }
                     }
                     else
                     {
@@ -469,19 +489,22 @@ int liso_handle_recv(int i)
                         buffer_shift_forward(currConnection, next_data);
                     }
 
-                    if (currConnection->request->status == 200 && (strcmp(HEAD, currConnection->request->method) == 0 || strcmp(GET, currConnection->request->method) == 0))
-                    {
-                        FD_SET(i, &(engine.wfds));
-                    }
-                    else if (currConnection->request->status != 200 && currConnection->request->status != 0)
+                    //if (currConnection->request->status == 200 && (strcmp(HEAD, currConnection->request->method) == 0 || strcmp(GET, currConnection->request->method) == 0))
+                    //{
+                    //    FD_SET(i, &(engine.wfds));
+                    //}
+                    //else 
+                    if (currConnection->request->status != 200 && currConnection->request->status != 0)
                     {
                         FD_SET(i, &(engine.wfds));
                     }
 
-                    if (strcmp(POST, currConnection->request->method) == 0)
-                    {
+                    //printf("eh...\n");
+
+                    //if (strcmp(POST, currConnection->request->method) == 0)
+                    //{
                         post_recv_phase(currConnection, i);
-                    }
+                    //}
                 }
                 else if (currConnection->hasRequestHeaders == 1)
                 {
@@ -508,6 +531,7 @@ int liso_handle_send(int i)
     int sentResponse;
     char *conn;
     char *version;
+    //char buf[BUF_SIZE];
     es_connection *currConnection = (&(engine.connections)[i]);
 
     if (currConnection->request->status != 200)
@@ -523,6 +547,23 @@ int liso_handle_send(int i)
             (engine.nfds)--;
         }
     }
+    else if ((currConnection->stdout_pipe)[0] >= 0)
+    {
+        retval = cgi_send_response(currConnection, i);
+
+        if (retval == -1)
+        {
+            // need to handle this portion
+            printf("CGI MESSED UP\n");
+            exit(EXIT_FAILURE);
+        }
+
+        if (retval == 0)
+        {
+            get_ready_for_pipeline(currConnection);
+            FD_CLR(i, &(engine.wfds));
+        }
+    }
     else
     {
         if (strcmp(POST, currConnection->request->method) == 0)
@@ -530,7 +571,7 @@ int liso_handle_send(int i)
             retval = send_response(currConnection, i);
 
             //FD_SET(i, &(engine.rfds));
-            printf("sock3: %d\n", i);
+            //printf("sock3: %d\n", i);
 
             //printPairs(currConnection->request->headers);
             //printf("Response: %s\n", currConnection->response);
@@ -569,7 +610,7 @@ int liso_handle_send(int i)
 
             //FD_SET(i, &(engine.rfds));
 
-            printf("sock4: %d\n", i);
+            //printf("sock4: %d\n", i);
 
             if (retval != -1)
             {
@@ -606,7 +647,7 @@ int liso_handle_send(int i)
                 retval = send_response(currConnection, i);
                 //FD_SET(i, &(engine.rfds));
 
-            printf("sock5: %d\n", i);
+            //printf("sock5: %d\n", i);
                 //printf("response probably sent: %d\n", i);
             }
             else if (sentResponse == 1)
@@ -615,9 +656,10 @@ int liso_handle_send(int i)
                 if (currConnection->request->status == 200)
                 {
                     retval = handle_get_io(currConnection, i);
+                    //printf("sent response\n");
                     //FD_SET(i, &(engine.rfds));
 
-            printf("sock6: %d\n", i);
+            //printf("sock6: %d\n", i);
 
                     if (retval != -1)
                     {
@@ -638,6 +680,7 @@ int liso_handle_send(int i)
                                 //printf("shit\n");
                             }
                             else {
+                                //printf("frig\n");
                                 get_ready_for_pipeline(currConnection);
                                 FD_CLR(i, &(engine.wfds));
                             }
@@ -646,7 +689,7 @@ int liso_handle_send(int i)
                 }
                 else
                 {
-                    printf("STATUS WAS NOT 200\n");
+                    //printf("STATUS WAS NOT 200\n");
                     cleanup_connection(currConnection);
                     FD_CLR(i, &(engine.rfds));
                     FD_CLR(i, &(engine.wfds));
@@ -657,6 +700,8 @@ int liso_handle_send(int i)
         }    
     }
 
+    //printf("FUCCCCCCCCK\n");
+
     return retval;
 }
 
@@ -664,6 +709,7 @@ void post_recv_phase(es_connection *connection, int i)
 {
     int writeSize;
     int content_length;
+    char *content_length_s;
 
     if (connection->postfinish == 0)
     {
@@ -674,7 +720,16 @@ void post_recv_phase(es_connection *connection, int i)
                 connection->iindex = 0;
             }
 
-            content_length = atoi(get_value(connection->request->headers, "content-length"));
+            content_length_s = get_value(connection->request->headers, "content-length");
+
+            if (content_length_s == NULL)
+            {
+                content_length = 0;
+            }
+            else 
+            {
+                content_length = atoi(get_value(connection->request->headers, "content-length"));
+            }
 
             if (content_length - connection->iindex >= connection->bufindex)
             {
@@ -685,6 +740,11 @@ void post_recv_phase(es_connection *connection, int i)
                 writeSize = content_length;
             }
 
+            if ((connection->stdout_pipe)[0] >= 0)
+            {
+                writeSize = cgi_write(connection, writeSize);
+            }
+            
             connection->iindex += writeSize;
 
             if (writeSize == connection->bufindex)
@@ -729,9 +789,10 @@ int send_response(es_connection *connection, int i)
         connection->responseIndex = 0;
     }
 
-    printf("response: %s\n", connection->response);
-    printPairs(connection->request->headers);
-    printf("path: %s\n", connection->dir);
+    //printf("response: %s\n", connection->response);
+    //printPairs(connection->request->headers);
+    //printf("path: %s\n", connection->dir);
+    //printf("rem: %s\n", connection->buf);
 
     if (connection->responseLeft >= BUF_SIZE)
     {
@@ -744,7 +805,9 @@ int send_response(es_connection *connection, int i)
 
     if (connection->context == NULL)
     {
+        //printf("before\n");
         writeret = send(i, connection->response + connection->responseIndex, sendSize, MSG_NOSIGNAL);
+        //printf("after\n");
     }
     else 
     {
@@ -753,7 +816,7 @@ int send_response(es_connection *connection, int i)
 
     if (writeret < 0)
     {
-        printf("IO WRITE error\n");
+        //printf("IO WRITE error\n");
         errnoSave = errno;
 
         FD_CLR(i, &(engine.rfds));
@@ -801,7 +864,7 @@ int handle_get_io(es_connection *connection, int i)
     int iosize;
     int errnoSave;
 
-    printf("ssl send file\n");
+    //printf("ssl send file\n");
 
     if (connection->ioIndex < 0)
     {
@@ -832,21 +895,21 @@ int handle_get_io(es_connection *connection, int i)
     {
         fp = fopen(connection->dir, "r");
         iosize = ssl_send_file(connection->context, fp, &(connection->sslioIndex), iosize);
-        printf("FILE: %d\n", fileno(fp));
+        //printf("FILE: %d\n", fileno(fp));
         fclose(fp);
     }
 
     //printf("ioindex: %d\n", connection->sslioIndex);
 
-    printf("IOSIZE: %d\n", iosize);
-    printf("CONTENT LEFT: %d\n", connection->sendContentSize);
+    //printf("IOSIZE: %d\n", iosize);
+    //printf("CONTENT LEFT: %d\n", connection->sendContentSize);
 
     //close(filefd);
 
     if (iosize < 0)
     {
 
-        printf("IoERROR\n");
+        //printf("IoERROR\n");
         errnoSave = errno;
 
         FD_CLR(i, &(engine.rfds));

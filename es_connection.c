@@ -31,6 +31,10 @@ void init_connection(es_connection *connection)
     (connection->request)->headers = (liso_hash *)malloc(sizeof(liso_hash));
     init_hash((connection->request)->headers);
     (connection->request)->status = 0;
+    (connection->stdin_pipe)[0] = -1;
+    (connection->stdin_pipe)[1] = -1;
+    (connection->stdout_pipe)[0] = -1;
+    (connection->stdout_pipe)[1] = -1;
 }
 
 void cleanup_connection(es_connection *connection)
@@ -56,6 +60,10 @@ void cleanup_connection(es_connection *connection)
     collapse((connection->request)->headers);
     free((connection->request)->headers);
     free(connection->request);
+    (connection->stdin_pipe)[0] = -1;
+    (connection->stdin_pipe)[1] = -1;
+    (connection->stdout_pipe)[0] = -1;
+    (connection->stdout_pipe)[1] = -1;
 }
 
 void get_ready_for_pipeline(es_connection *connection)
@@ -86,4 +94,10 @@ void get_ready_for_pipeline(es_connection *connection)
     connection->request->status = 0;
     //free((connection->request)->headers);
     //free(connection->request);
+    //
+    (connection->stdin_pipe)[0] = -1;
+    (connection->stdin_pipe)[1] = -1;
+    (connection->stdout_pipe)[0] = -1;
+    (connection->stdout_pipe)[1] = -1;
+
 }
