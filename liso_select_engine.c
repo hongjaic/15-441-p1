@@ -22,7 +22,7 @@ void look_buffer_for_request(es_connection *connection, int i);
 void process_buffer(es_connection *connection, int i);
 void non_poisonouse_finish(es_connection *connection, int i);
 void SSL_init();
-void SSL_wrap(es_connection *connection, int sock);
+int SSL_wrap(es_connection *connection, int sock);
 
 int liso_engine_create(int port, char *flog, char *flock)
 {
@@ -217,8 +217,10 @@ int liso_handle_recv(int i)
 
                 currConnection->context = SSL_new(engine.ssl_context);
 
+                /*
                 if (currConnection->context != NULL)
                 {
+
                     if (SSL_set_fd(currConnection->context, client_sock) == 0)
                     {
                         //close_socket(engine.sock);
@@ -249,6 +251,11 @@ int liso_handle_recv(int i)
                         FD_SET(client_sock, &(engine.rfds));
                         return -1;
                     }
+                }*/
+
+                if (SSL_wrap(currConnection, client_sock) < 0)
+                {
+                    return -1;
                 }
             }
 
@@ -280,6 +287,7 @@ int liso_handle_recv(int i)
 
                 currConnection->context = SSL_new(engine.ssl_context);
 
+                /*
                 if (currConnection->context != NULL)
                 {
                     if (SSL_set_fd(currConnection->context, client_sock) == 0)
@@ -303,6 +311,11 @@ int liso_handle_recv(int i)
                         liso_logger_log(ERROR, "SSL_set_fd", "Error accepting (handshake) client SSL context.\n", ssl_port, engine.logger.loggerfd);
                         exit(EXIT_FAILURE);
                     }
+                }*/
+
+                if (SSL_wrap(currConnection, client_sock) < 0)
+                {
+                    return -1;
                 }
             }
 
@@ -902,30 +915,39 @@ void SSL_init()
     }
 }
 
-void SSL_wrap(es_connection *connection, int sock)
+int SSL_wrap(es_connection *connection, int sock)
 {
     if (connection->context != NULL)
     {
         if (SSL_set_fd(connection->context, sock) == 0)
         {
-            close_socket(engine.sock);
-            close_socket(engine.ssl_sock);
-            SSL_free(connection->context);
-            SSL_CTX_free(engine.ssl_context);
-            fprintf(stderr, "Error creating client SSL context.\n");
-            liso_logger_log(ERROR, "SSL_set_fd", "Error creating client SSL context.\n", ssl_port, engine.logger.loggerfd);
-            exit(EXIT_FAILURE);
+            //close_socket(sock);
+            //FD_SET(sock, &(engine.rfds));
+            return -1;
+
+            //close_socket(engine.sock);
+            //close_socket(engine.ssl_sock);
+            //SSL_free(connection->context);
+            //SSL_CTX_free(engine.ssl_context);
+            //fprintf(stderr, "Error creating client SSL context.\n");
+            //liso_logger_log(ERROR, "SSL_set_fd", "Error creating client SSL context.\n", ssl_port, engine.logger.loggerfd);
+            //exit(EXIT_FAILURE);
         }
 
         if ( SSL_accept(connection->context) <= 0)
         {
-            close_socket(engine.sock);
-            close_socket(engine.ssl_sock);
-            SSL_free(connection->context);
-            SSL_CTX_free(engine.ssl_context);
-            fprintf(stderr, "Error creating client SSL context.\n");
-            liso_logger_log(ERROR, "SSL_set_fd", "Error accepting (handshake) client SSL context.\n", ssl_port, engine.logger.loggerfd);
-            exit(EXIT_FAILURE);
+            //close_socket(sock);
+            //FD_SET(sock, &(engine.rfds));
+            return -1;
+            
+            //close_socket(engine.sock);
+            //close_socket(engine.ssl_sock);
+            //SSL_free(connection->context);
+            //SSL_CTX_free(engine.ssl_context);
+            //fprintf(stderr, "Error creating client SSL context.\n");
+            //liso_logger_log(ERROR, "SSL_set_fd", "Error accepting (handshake) client SSL context.\n", ssl_port, engine.logger.loggerfd);
+            //exit(EXIT_FAILURE);
         }
     }
+    return 1; 
 }
