@@ -39,6 +39,5 @@ int cgi_write(es_connection *connection, int writesize);
 int cgi_read(es_connection *connection, char *buf);
 int cgi_close_parent_pipe(es_connection *connection);
 int cgi_send_response(es_connection *connection, int i);
-void cgi_build_envp(es_connection *connection);
 
 #endif

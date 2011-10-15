@@ -7,8 +7,6 @@
 
 #include "liso_cgi.h"
 
-void set_envp_at_i(int i, char *header, char *envpi);
-
 int cgi_init(es_connection *connection)
 {
 
@@ -31,12 +29,9 @@ int cgi_init(es_connection *connection)
     char path_info[2048];
     char request_uri[2048];
     char query_string[2048];
-    //char script_name[2048];
     char remote_addr[2048];
     char request_method[2048];
     char server_port[2048];
-    //char server_protocol[2048];
-    //char server_software[2048];
     char http_accept[2048];
     char http_referer[2048];
     char http_accept_encoding[2048];
@@ -71,22 +66,6 @@ int cgi_init(es_connection *connection)
 
     if (pid == 0)
     {
-        //printf("CHILD\n");
-        //printf("ah %s\n", ENVP[3]);
-        //cgi_build_envp(connection);
-
-        //printf("ah %s\n", ENVP[3]);
-   //     if (connection->context != NULL)
-   //     {
-   //         sprintf(ENVP[10], "%s%d", "SERVER_PORT=", ssl_port);    
-   //     }
-   //     else
-   //     {
-   //         sprintf(ENVP[10], "%s%d", "SERVER_PORT=", port);
-   //     }
-
-   //     sprintf(ENVP[5], "%s%s", "REMOTE_ADDR=", connection->remote_ip);
-
         if ((val = get_value(connection->request->headers, "content-length")) != NULL)
         {
             sprintf(content_length, "%s%s", "CONTENT_LENGTH=", val);
@@ -268,14 +247,6 @@ int cgi_init(es_connection *connection)
             ENVP[20] = "HTTP_CONNECTION=";
         }
 
-//        int i;
-
- //       for (i = 0; i < 22; i++)
-//        {
-  //          printf("%s\n", ENVP[i]);
-//        }
-
-
         close((connection->stdout_pipe)[0]);
         close((connection->stdin_pipe)[1]);
         dup2((connection->stdout_pipe)[1], fileno(stdout));
@@ -311,6 +282,8 @@ int cgi_write(es_connection *connection, int writesize)
     if ((writeret = write((connection->stdin_pipe)[1], connection->buf, writesize)) < 0)
     {
         perror("write");
+        FD_CLR((connection->stdout_pipe)[0], &(engine.wfds));
+        FD_CLR((connection->stdin_pipe)[1], &(engine.rfds));
         return -1;
     }
 
@@ -322,6 +295,7 @@ int cgi_send_response(es_connection *connection, int i)
     int sent;
     int read;
     char temp[8096];
+    int errnoSave;
 
     read = cgi_read(connection, connection->response);
 
@@ -332,10 +306,28 @@ int cgi_send_response(es_connection *connection, int i)
 
     (connection->responseIndex) += read;
 
-    sent = send(i, connection->response, connection->responseIndex, 0);
+    sent = send(i, connection->response, connection->responseIndex, MSG_NOSIGNAL);
 
     if (sent < 0)
     {
+        errnoSave = errno;
+
+        FD_CLR(i, &(engine.rfds));
+        FD_CLR(i, &(engine.wfds));
+        FD_CLR((connection->stdout_pipe)[0], &(engine.wfds));
+        FD_CLR((connection->stdin_pipe)[1], &(engine.rfds));
+
+        cleanup_connection(connection);
+        close_socket(i);
+
+        if (errnoSave != ECONNRESET && errnoSave != EPIPE)
+        {
+            close_socket(engine.sock);
+            exit(EXIT_FAILURE);
+        }
+
+        (engine.nfds)--;
+
         return -1;
     }
 
@@ -362,11 +354,11 @@ int cgi_read(es_connection *connection, char *buf)
 
     if ((readret = read((connection->stdout_pipe)[0], buf, 8096 - connection->responseIndex-1)) < 0)
     {
+        FD_CLR((connection->stdout_pipe)[0], &(engine.wfds));
+        FD_CLR((connection->stdin_pipe)[1], &(engine.rfds));
         perror("read");
         return -1;
     }
-
-    //printf("what's readret?: %d\n", readret);
 
     return readret;
 }
@@ -379,81 +371,3 @@ int cgi_close_parent_pipe(es_connection *connection)
     return 1;
 }
 
-void cgi_build_envp(es_connection *connection)
-{
-    char *val;
-    char path_info[2048];
-    char request_uri[2048];
-    char query_string[2048];
-
-    http_request *request = connection->request;
-    char *uri = request->uri;
-
-    parse_uri(uri, path_info, request_uri, query_string);
-
-    val = get_value(request->headers, "content-length");
-    set_envp_at_i(0, "CONTENT_LENGTH=", val);
-
-    val = get_value(request->headers, "content-type");
-    set_envp_at_i(1, "COTENT_TYPE=", val);
-
-    val = get_value(request->headers, "gateway-interface");
-    set_envp_at_i(2, "GATEWAY_INTERFACE", val);
-
-    set_envp_at_i(3, "PATH_INFO=", path_info);
-
-    set_envp_at_i(4, "QUERY_STRING=", query_string);
-
-    val = request->method;
-    set_envp_at_i(6, "REQUEST_METHOD=", val);
-
-    set_envp_at_i(7, "REQUEST_URI=", request_uri);
-
-    val = get_value(request->headers, "host-name");
-    set_envp_at_i(9, "HOST_NAME=", val);
-
-    val = get_value(request->headers, "http-accept");
-    set_envp_at_i(13, "HTTP_ACCEPT=", val);
-
-    val = get_value(request->headers, "http-referer");
-    set_envp_at_i(14, "HTTP_REFERER=", val);
-
-    val = get_value(request->headers, "http-accept-encoding");
-    set_envp_at_i(15, "HTTP_ACCEPT_ENCODING=", val);
-
-    val = get_value(request->headers, "http-accept-language");
-    set_envp_at_i(16, "HTTP_ACCEPT_LANGUAGE=", val);
-
-    val = get_value(request->headers, "http-accept-charset");
-    set_envp_at_i(17, "HTTP_ACCEPT_CHARSET=", val);
-
-    val = get_value(request->headers, "http-cookie");
-    set_envp_at_i(18, "HTTP_COOKIE=", val);
-
-    val = get_value(request->headers, "http-user-agent");
-    set_envp_at_i(19, "HTTP_USER_AGENT", val);
-
-    val = get_value(request->headers, "http-connection");
-    set_envp_at_i(20, "HTTP_CONNECTION=", val);
-
-    val = get_value(request->headers, "http-host");
-    set_envp_at_i(21, "HTTP_HOST", val);
-
-    memset(ENVP[22], 0, 2048);
-
-    sprintf(ENVP[8], "%s", "SCRIPT_NAME=/cgi");
-    sprintf(ENVP[11], "%s", "SERVER_PROTOCOL=HTTP/1.1");
-    sprintf(ENVP[12], "%s", "SERVER_SOFTWARE=Liso/1.0");
-}
-
-void set_envp_at_i(int i, char *header, char *envpi)
-{
-    if(envpi != NULL)
-    {
-        sprintf(ENVP[i], "%s%s", header, envpi);
-    }
-    else
-    {
-        sprintf(ENVP[i], "%s", header);
-    }
-}
