@@ -19,17 +19,26 @@
 #include "es_connection.h"
 #include <unistd.h>
 #include "http_parser.h"
+#include "http_request.h"
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include "liso_select_engine.h"
 
-#define FILENAME "./cgi_script.py"
+#define FILENAME "/afs/andrew.cmu.edu/usr21/hongjaic/15441/project1_cp1_starter/flaskr/flaskr.py"
 
 extern char *ARGV[];
-extern char *ENVP[];
+extern char *ENVP[23];
+extern int port;
+extern int ssl_port;
+extern char *cgi;
+extern struct liso_select_engine engine;
 
 int cgi_init(es_connection *connection);
 int cgi_write(es_connection *connection, int writesize);
 int cgi_read(es_connection *connection, char *buf);
 int cgi_close_parent_pipe(es_connection *connection);
 int cgi_send_response(es_connection *connection, int i);
-
+void cgi_build_envp(es_connection *connection);
 
 #endif

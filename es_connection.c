@@ -9,6 +9,7 @@
 
 void init_connection(es_connection *connection)
 {
+    connection->remote_ip = "";
     connection->context = NULL;
     connection->bufindex = 0;
     memset(connection->buf, 0, BUF_SIZE);
@@ -39,6 +40,7 @@ void init_connection(es_connection *connection)
 
 void cleanup_connection(es_connection *connection)
 {
+    connection->remote_ip = "";
     connection->context = NULL;
     connection->bufindex = 0;
     memset(connection->buf, 0, BUF_SIZE);

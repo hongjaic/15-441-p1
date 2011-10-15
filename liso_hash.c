@@ -96,6 +96,7 @@ int hash_add(liso_hash *h, char *key, char *value)
     pair *dom = NULL;
 
     string_tolower(key);
+    string_tolower(value);
 
     if (contains_key(h, key))
     {

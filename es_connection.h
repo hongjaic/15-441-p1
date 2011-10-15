@@ -18,6 +18,7 @@
 #define MAX_DIR_LENGTH    2304
 
 typedef struct es_connection {
+    char *remote_ip;
     SSL *context;
     int bufindex;
     char buf[RW_BUF_SIZE];

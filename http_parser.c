@@ -563,6 +563,69 @@ char *status_message(int status)
     return message;
 }
 
+
+void parse_uri(char *uri, char *path_info, char *request_uri, char *query_string)
+{
+    int i;
+    char *path_begin;
+    char *path_end;
+    char *request_begin;
+    char *request_end;
+    char *query_begin;
+    char *query_end;
+
+    request_begin = uri;
+    request_end = strstr(uri, "?");
+    if (request_end == NULL)
+    {
+        request_end = uri + strlen(uri);
+    }
+
+    path_begin = uri + 4;
+    path_end = request_end;
+    
+    query_begin = strstr(uri, "?");
+    if (query_begin != NULL)
+    {
+        query_begin += 1;
+    }
+    query_end = uri + strlen(uri);
+
+    i = 0;
+    for ( ; request_begin < request_end; request_begin++)
+    {
+        *(request_uri + i) = *request_begin;
+        i++;
+    }
+
+    *(request_uri + i) = '\0';
+
+    i = 0;
+    for ( ; path_begin < path_end; path_begin++)
+    {
+        *(path_info + i) = *path_begin;
+        i++;
+    }
+
+    *(path_info + i) = '\0';
+
+    if (query_begin != NULL)
+    {
+        i = 0;
+        for ( ; query_begin < query_end; query_begin++)
+        {
+            *(query_string + i) = *query_begin;
+            i++;
+        }
+
+        *(query_string + i) = '\0';
+    }
+    else
+    {
+        *query_string = '\0';
+    }
+}
+
 void generate_time(char *time_s)
 {
     time_t time_time;

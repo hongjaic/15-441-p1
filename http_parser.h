@@ -53,5 +53,6 @@ void determine_status(es_connection *connection);
 int request_method_is_implemented(char *method);
 int request_method_valid(char *method);
 char *status_message(int status);
+void parse_uri(char *uri, char *path_info, char *request_uri, char *query_string); 
 
 #endif
