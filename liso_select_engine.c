@@ -221,24 +221,33 @@ int liso_handle_recv(int i)
                 {
                     if (SSL_set_fd(currConnection->context, client_sock) == 0)
                     {
-                        close_socket(engine.sock);
-                        close_socket(engine.ssl_sock);
-                        SSL_free(currConnection->context);
-                        SSL_CTX_free(engine.ssl_context);
-                        fprintf(stderr, "Error creating client SSL context.\n");
-                        liso_logger_log(ERROR, "SSL_set_fd", "Error creating client SSL context.\n", ssl_port, engine.logger.loggerfd);
-                        exit(EXIT_FAILURE);
+                        //close_socket(engine.sock);
+                        //close_socket(engine.ssl_sock);
+                        //SSL_free(currConnection->context);
+                        //SSL_CTX_free(engine.ssl_context);
+                        //fprintf(stderr, "Error creating client SSL context.\n");
+                        //liso_logger_log(ERROR, "SSL_set_fd", "Error creating client SSL context.\n", ssl_port, engine.logger.loggerfd);
+                        //exit(EXIT_FAILURE);
+                       
+                        close_socket(client_sock);
+                        FD_SET(client_sock, &(engine.rfds));
+                        return -1;
                     }
 
                     if ( SSL_accept(currConnection->context) <= 0)
                     {
-                        close_socket(engine.sock);
-                        close_socket(engine.ssl_sock);
-                        SSL_free(currConnection->context);
-                        SSL_CTX_free(engine.ssl_context);
-                        fprintf(stderr, "Error creating client SSL context.\n");
-                        liso_logger_log(ERROR, "SSL_set_fd", "Error accepting (handshake) client SSL context.\n", ssl_port, engine.logger.loggerfd);
-                        exit(EXIT_FAILURE);
+                        //close_socket(engine.sock);
+                        //close_socket(engine.ssl_sock);
+                        //SSL_free(currConnection->context);
+                        //SSL_CTX_free(engine.ssl_context);
+                        //fprintf(stderr, "Error creating client SSL context.\n");
+                        //liso_logger_log(ERROR, "SSL_set_fd", "Error accepting (handshake) client SSL context.\n", ssl_port, engine.logger.loggerfd);
+                        //exit(EXIT_FAILURE);
+                        //
+                        //
+                        close_socket(client_sock);
+                        FD_SET(client_sock, &(engine.rfds));
+                        return -1;
                     }
                 }
             }
@@ -501,7 +510,10 @@ int liso_handle_send(int i)
 
                     if (retval != -1)
                     {
-                        non_poisonouse_finish(currConnection, i);
+                        if (currConnection->sendContentSize == 0)
+                        {
+                            non_poisonouse_finish(currConnection, i);
+                        }
                     }
                 }
                 else
