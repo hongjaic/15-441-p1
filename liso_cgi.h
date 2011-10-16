@@ -24,10 +24,10 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include "liso_select_engine.h"
+#include "liso_hash.h"
+#include <openssl/ssl.h>
 
-#define FILENAME "/afs/andrew.cmu.edu/usr21/hongjaic/15441/project1_cp1_starter/flaskr/flaskr.py"
-
-extern char *ARGV[];
+extern char *ARGV[2];
 extern char *ENVP[23];
 extern int port;
 extern int ssl_port;

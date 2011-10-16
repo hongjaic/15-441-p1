@@ -41,8 +41,8 @@ int liso_engine_create(int port, char *flog, char *flock)
     if (engine.sock == -1)
     {
         SSL_CTX_free(engine.ssl_context);
-        fprintf(stderr, "Failed creating socket.\n");
         liso_logger_log(ERROR, "socket", "Failed creating socket.\n", port, engine.logger.loggerfd);
+        liso_logger_close(&(engine.logger));
         exit(EXIT_FAILURE);
     }
 
@@ -50,8 +50,8 @@ int liso_engine_create(int port, char *flog, char *flock)
     if (engine.ssl_sock == -1)
     {
         SSL_CTX_free(engine.ssl_context);
-        fprintf(stderr, "Failed create ssl socket.\n");
         liso_logger_log(ERROR, "socket", "Failed creating ssl socket.\n", ssl_port, engine.logger.loggerfd);
+        liso_logger_close(&(engine.logger));
         exit(EXIT_FAILURE);
     }
 
@@ -69,8 +69,8 @@ int liso_engine_create(int port, char *flog, char *flock)
         SSL_CTX_free(engine.ssl_context);
         close_socket(engine.sock);
         close_socket(engine.ssl_sock);
-        fprintf(stderr, "Failed binding socket.\n");
         liso_logger_log(ERROR, "bind", "Failed binding socket.\n", port, engine.logger.loggerfd);
+        liso_logger_close(&(engine.logger));
         exit(EXIT_FAILURE);
     }
 
@@ -79,8 +79,8 @@ int liso_engine_create(int port, char *flog, char *flock)
         SSL_CTX_free(engine.ssl_context);
         close_socket(engine.sock);
         close_socket(engine.ssl_sock);
-        fprintf(stderr, "Failed binding ssl socket.\n");
         liso_logger_log(ERROR, "bind", "Failed binding ssl socket.\n", ssl_port, engine.logger.loggerfd);
+        liso_logger_close(&(engine.logger));
         exit(EXIT_FAILURE);
     }
 
@@ -90,8 +90,8 @@ int liso_engine_create(int port, char *flog, char *flock)
         SSL_CTX_free(engine.ssl_context);
         close_socket(engine.sock);
         close_socket(engine.ssl_sock);
-        fprintf(stderr, "Error listening on socket.\n");
         liso_logger_log(ERROR, "listen", "Failed listening on socket.\n", port, engine.logger.loggerfd);
+        liso_logger_close(&(engine.logger));
         exit(EXIT_FAILURE);
     }
 
@@ -100,8 +100,8 @@ int liso_engine_create(int port, char *flog, char *flock)
         SSL_CTX_free(engine.ssl_context);
         close_socket(engine.sock);
         close_socket(engine.ssl_sock);
-        fprintf(stderr, "Error listening on ssl socket.\n");
         liso_logger_log(ERROR, "listen", "Failed listening on ssl socket.\n", ssl_port, engine.logger.loggerfd);
+        liso_logger_close(&(engine.logger));
         exit(EXIT_FAILURE);
     }
 
@@ -136,8 +136,8 @@ int liso_engine_event_loop()
         if (selReturn < 0)
         {
             close_socket(engine.sock);
-            perror("ERROR: select returned -1\n");
-            liso_logger_log(ERROR, "select", "select returned -1\n", port, engine.logger.loggerfd);
+            liso_logger_log(ERROR, "select", "select returned -1", port, engine.logger.loggerfd);
+            liso_logger_close(&(engine.logger));
             exit(4);
         }
 
@@ -201,8 +201,7 @@ int liso_handle_recv(int i)
                 SSL_CTX_free(engine.ssl_context);
                 close(engine.sock);
                 close(engine.ssl_sock);
-                fprintf(stderr, "Error accepting connection.\n");
-                liso_logger_log(ERROR, "accpet", "select returned -1\n", port, engine.logger.loggerfd);
+                liso_logger_log(ERROR, "accpet", "accept error", port, engine.logger.loggerfd);
                 return -1;
             }
 
@@ -216,42 +215,6 @@ int liso_handle_recv(int i)
                 currConnection = &((engine.connections)[client_sock]);
 
                 currConnection->context = SSL_new(engine.ssl_context);
-
-                /*
-                if (currConnection->context != NULL)
-                {
-
-                    if (SSL_set_fd(currConnection->context, client_sock) == 0)
-                    {
-                        //close_socket(engine.sock);
-                        //close_socket(engine.ssl_sock);
-                        //SSL_free(currConnection->context);
-                        //SSL_CTX_free(engine.ssl_context);
-                        //fprintf(stderr, "Error creating client SSL context.\n");
-                        //liso_logger_log(ERROR, "SSL_set_fd", "Error creating client SSL context.\n", ssl_port, engine.logger.loggerfd);
-                        //exit(EXIT_FAILURE);
-                       
-                        close_socket(client_sock);
-                        FD_SET(client_sock, &(engine.rfds));
-                        return -1;
-                    }
-
-                    if ( SSL_accept(currConnection->context) <= 0)
-                    {
-                        //close_socket(engine.sock);
-                        //close_socket(engine.ssl_sock);
-                        //SSL_free(currConnection->context);
-                        //SSL_CTX_free(engine.ssl_context);
-                        //fprintf(stderr, "Error creating client SSL context.\n");
-                        //liso_logger_log(ERROR, "SSL_set_fd", "Error accepting (handshake) client SSL context.\n", ssl_port, engine.logger.loggerfd);
-                        //exit(EXIT_FAILURE);
-                        //
-                        //
-                        close_socket(client_sock);
-                        FD_SET(client_sock, &(engine.rfds));
-                        return -1;
-                    }
-                }*/
 
                 if (SSL_wrap(currConnection, client_sock) < 0)
                 {
@@ -273,8 +236,7 @@ int liso_handle_recv(int i)
             if (client_sock < 0)
             {
                 close(engine.sock);
-                fprintf(stderr, "Error accepting connection.\n");
-                liso_logger_log(ERROR, "accept", "select returned -1\n", port, engine.logger.loggerfd);
+                liso_logger_log(ERROR, "accept", "accpet error", ssl_port, engine.logger.loggerfd);
                 return -1;
             }
             init_connection(&((engine.connections)[client_sock]));
@@ -286,32 +248,6 @@ int liso_handle_recv(int i)
                 currConnection = &((engine.connections)[client_sock]);
 
                 currConnection->context = SSL_new(engine.ssl_context);
-
-                /*
-                if (currConnection->context != NULL)
-                {
-                    if (SSL_set_fd(currConnection->context, client_sock) == 0)
-                    {
-                        close_socket(engine.sock);
-                        close_socket(engine.ssl_sock);
-                        SSL_free(currConnection->context);
-                        SSL_CTX_free(engine.ssl_context);
-                        fprintf(stderr, "Error creating client SSL context.\n");
-                        liso_logger_log(ERROR, "SSL_set_fd", "Error creating client SSL context.\n", ssl_port, engine.logger.loggerfd);
-                        exit(EXIT_FAILURE);
-                    }
-
-                    if (SSL_accept(currConnection->context) <= 0)
-                    {
-                        close_socket(engine.sock);
-                        close_socket(engine.ssl_sock);
-                        SSL_free(currConnection->context);
-                        SSL_CTX_free(engine.ssl_context);
-                        fprintf(stderr, "Error creating client SSL context.\n");
-                        liso_logger_log(ERROR, "SSL_set_fd", "Error accepting (handshake) client SSL context.\n", ssl_port, engine.logger.loggerfd);
-                        exit(EXIT_FAILURE);
-                    }
-                }*/
 
                 if (SSL_wrap(currConnection, client_sock) < 0)
                 {
@@ -358,11 +294,6 @@ int liso_handle_recv(int i)
             {
                 if (readret == 0)
                 {
-                    if (strstr(currConnection->request->uri, "/cgi/") != NULL)
-                    {
-                        FD_CLR((currConnection->stdout_pipe)[0], &(engine.wfds));
-                        FD_CLR((currConnection->stdin_pipe)[1], &(engine.rfds));
-                    }
                     liso_close_and_cleanup(i);
                     return -1;
                 }
@@ -379,6 +310,7 @@ int liso_handle_recv(int i)
                     {
                         memset(engine.buf, 0, BUF_SIZE);
                         liso_close_and_cleanup(i);
+                        liso_logger_log(ERROR, "liso_handle_recv", "ECONNRESET\n", port, engine.logger.loggerfd);
                         return -1; 
                     }
                     else
@@ -409,6 +341,8 @@ int liso_handle_recv(int i)
                 {
                     if (SSL_get_error(currConnection->context, readret) == SSL_ERROR_ZERO_RETURN)
                     {
+                        liso_logger_log(ERROR, "liso_handle_recv", "SSL_ERROR_ZERO_RETURN\n", ssl_port, engine.logger.loggerfd);
+                        SSL_free(currConnection->context);
                         liso_close_and_cleanup(i);
                         return -1;
                     } 
@@ -419,7 +353,7 @@ int liso_handle_recv(int i)
                     }
                     else
                     {
-                        //printf("HAHAH\n");
+                        liso_logger_log(ERROR, "liso_handle_recv", "Unidentified SSL_read error \n", ssl_port, engine.logger.loggerfd);
                         liso_close_and_cleanup(i);
                         return -1;
                     }
@@ -455,10 +389,6 @@ int liso_handle_send(int i)
 
         if (retval == -1)
         {
-            cgi_close_parent_pipe(currConnection);
-            // need to handle this portion
-            //printf("CGI MESSED UP\n");
-            //exit(EXIT_FAILURE);
             return -1;
         }
 
@@ -467,6 +397,8 @@ int liso_handle_send(int i)
             FD_CLR((currConnection->stdout_pipe)[0], &(engine.wfds));
             FD_CLR((currConnection->stdin_pipe)[1], &(engine.rfds));
             cgi_close_parent_pipe(currConnection);
+            engine.nfds--;
+            engine.nfds--;
             get_ready_for_pipeline(currConnection);
             FD_CLR(i, &(engine.wfds));
         }
@@ -480,13 +412,9 @@ int liso_handle_send(int i)
     {
         retval =  send_response(currConnection, i);
 
-        if (currConnection->responseLeft == 0)
+        if (retval != -1)
         {
-            cleanup_connection(currConnection);
-            FD_CLR(i, &(engine.rfds));
-            FD_CLR(i, &(engine.wfds));
-            close_socket(i);
-            (engine.nfds)--;
+            non_poisonouse_finish(currConnection, i);
         }
     }
     else
@@ -576,7 +504,7 @@ void post_recv_phase(es_connection *connection, int i)
             }
             else
             {
-                writeSize = content_length;
+                writeSize = content_length - connection->iindex;
             }
 
             if (strstr(connection->request->uri, "/cgi/") != NULL)
@@ -653,12 +581,24 @@ int send_response(es_connection *connection, int i)
         FD_CLR(i, &(engine.rfds));
         FD_CLR(i, &(engine.wfds));
 
+        if(connection->context != NULL)
+        {
+            SSL_free(connection->context);
+        }
+
         cleanup_connection(connection);
         close_socket(i);
 
         if (errnoSave != ECONNRESET && errnoSave != EPIPE)
         {
             close_socket(engine.sock);
+            close_socket(engine.ssl_sock);
+            if (connection->context != NULL)
+            {
+                SSL_free(connection->context);
+            }
+            SSL_CTX_free(engine.ssl_context);
+            liso_logger_log(ERROR, "send_response", "Either send or SSL_WRITE error.\n", ssl_port, engine.logger.loggerfd);
             exit(EXIT_FAILURE);
         }
 
@@ -724,6 +664,11 @@ int handle_get_io(es_connection *connection, int i)
         FD_CLR(i, &(engine.rfds));
         FD_CLR(i, &(engine.wfds));
 
+        if (connection->context != NULL)
+        {
+            SSL_free(connection->context);
+        }
+
         cleanup_connection(connection);
         close_socket(i);
 
@@ -762,6 +707,18 @@ void buffer_shift_forward(es_connection *connection, char *next_data)
 
 void liso_select_cleanup(int i)
 {
+    es_connection *currConnection = &((engine.connections)[i]);
+
+    if (strstr(currConnection->request->uri, "/cgi/") != NULL)
+    {
+        FD_CLR((currConnection->stdout_pipe)[0], &(engine.wfds));
+        FD_CLR((currConnection->stdin_pipe)[1], &(engine.rfds));
+        FD_CLR(i, &(engine.rfds));
+        FD_CLR(i, &(engine.wfds));
+        engine.nfds--;
+        engine.nfds--;
+    }
+
     FD_CLR(i, &(engine.rfds));
     FD_CLR(i, &(engine.wfds));
 
@@ -769,7 +726,7 @@ void liso_select_cleanup(int i)
 }
 
 void liso_close_and_cleanup(int i)
-{
+{  
     liso_select_cleanup(i);
     close_socket(i);
     (engine.nfds)--;
@@ -779,7 +736,7 @@ void liso_close_if_requested(es_connection *connection, int i)
 {
     char *conn = get_value(connection->request->headers, "connection");
 
-    if (strcmp(conn, "close") == 0)
+    if (strcmp(conn, "Close") == 0)
     {
         liso_close_and_cleanup(i);
     }
@@ -789,8 +746,8 @@ int close_socket(int sock)
 {
     if (close(sock))
     {
-        fprintf(stderr, "Failed closing socket.\n");
-        liso_logger_log(ERROR, "close_socket", "select returned -1\n", port, engine.logger.loggerfd);
+        liso_logger_log(ERROR, "close_socket", "close_socket error\n", port, engine.logger.loggerfd);
+        liso_logger_close(&(engine.logger));
         return 1;
     }
     return 0;
@@ -872,7 +829,7 @@ void non_poisonouse_finish(es_connection *connection, int i)
         {
             liso_close_and_cleanup(i);
         }
-        else if (conn != NULL && strcmp(conn, "close") == 0)
+        else if (conn != NULL && strcmp(conn, "Close") == 0)
         {
             liso_close_and_cleanup(i);
         }
@@ -897,20 +854,23 @@ void SSL_init()
     if ((engine.ssl_context = SSL_CTX_new(TLSv1_server_method())) == NULL)
     {
         liso_logger_log(ERROR, "SSL_init", "Error creating SSL context.\n", port, engine.logger.loggerfd);
+        liso_logger_close(&(engine.logger));
         exit(EXIT_FAILURE);
     }
 
-    if (SSL_CTX_use_PrivateKey_file(engine.ssl_context, "../private/hongjaic2.key", SSL_FILETYPE_PEM) == 0)
+    if (SSL_CTX_use_PrivateKey_file(engine.ssl_context, "./private/hongjaic2.key", SSL_FILETYPE_PEM) == 0)
     {
         SSL_CTX_free(engine.ssl_context);
         liso_logger_log(ERROR, "SSL_init", "Error associating private key.\n", port, engine.logger.loggerfd);
+        liso_logger_close(&(engine.logger));
         exit(EXIT_FAILURE);
     }
 
-    if (SSL_CTX_use_certificate_file(engine.ssl_context, "../certs/hongjaic2.crt", SSL_FILETYPE_PEM) == 0)
+    if (SSL_CTX_use_certificate_file(engine.ssl_context, "./certs/hongjaic2.crt", SSL_FILETYPE_PEM) == 0)
     {
         SSL_CTX_free(engine.ssl_context);
         liso_logger_log(ERROR, "SSL_init", "Error associating certification.\n", port, engine.logger.loggerfd);
+        liso_logger_close(&(engine.logger));
         exit(EXIT_FAILURE);
     }
 }
@@ -921,32 +881,23 @@ int SSL_wrap(es_connection *connection, int sock)
     {
         if (SSL_set_fd(connection->context, sock) == 0)
         {
-            //close_socket(sock);
-            //FD_SET(sock, &(engine.rfds));
-            return -1;
-
-            //close_socket(engine.sock);
-            //close_socket(engine.ssl_sock);
-            //SSL_free(connection->context);
-            //SSL_CTX_free(engine.ssl_context);
-            //fprintf(stderr, "Error creating client SSL context.\n");
-            //liso_logger_log(ERROR, "SSL_set_fd", "Error creating client SSL context.\n", ssl_port, engine.logger.loggerfd);
-            //exit(EXIT_FAILURE);
+            close_socket(engine.sock);
+            close_socket(engine.ssl_sock);
+            SSL_free(connection->context);
+            SSL_CTX_free(engine.ssl_context);
+            liso_logger_log(ERROR, "SSL_set_fd", "Error creating client SSL context.\n", ssl_port, engine.logger.loggerfd);
+            liso_logger_close(&(engine.logger));
+            exit(EXIT_FAILURE);
         }
 
         if ( SSL_accept(connection->context) <= 0)
         {
-            //close_socket(sock);
-            //FD_SET(sock, &(engine.rfds));
+            close_socket(sock);
+            FD_CLR(sock, &(engine.rfds));
+            FD_CLR(sock, &(engine.wfds));
+            SSL_free(connection->context);
+            liso_logger_log(ERROR, "SSL_accpt", "Error accepting client SSL context.\n", ssl_port, engine.logger.loggerfd);
             return -1;
-            
-            //close_socket(engine.sock);
-            //close_socket(engine.ssl_sock);
-            //SSL_free(connection->context);
-            //SSL_CTX_free(engine.ssl_context);
-            //fprintf(stderr, "Error creating client SSL context.\n");
-            //liso_logger_log(ERROR, "SSL_set_fd", "Error accepting (handshake) client SSL context.\n", ssl_port, engine.logger.loggerfd);
-            //exit(EXIT_FAILURE);
         }
     }
     return 1; 

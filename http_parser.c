@@ -27,6 +27,15 @@ int build_response(es_connection *connection, char *response)
     char errorhtml[100];
     struct stat statbuf;
 
+    char *conn;
+
+    conn = get_value(connection->request->headers, "connection");
+
+    if (conn == NULL)
+    {
+        conn = "Close";
+    }
+
     if((status = (connection->request)->status) == 0)
         return -1;
 
@@ -36,11 +45,7 @@ int build_response(es_connection *connection, char *response)
         content_size = strlen(errorhtml);
         generate_time(date);
         
-        //if (status != 500)
-        //    sprintf(response, "HTTP/1.1 %d %s\r\nConnection: Keep-Alive\r\nDate: %s\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s", 
-        //            status, status_message(status), date, content_size, errorhtml);
-        //else
-            sprintf(response, "HTTP/1.1 %d %s\r\nConnection: Close\r\nDate: %s\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s", 
+        sprintf(response, "HTTP/1.1 %d %s\r\nConnection: Close\r\nDate: %s\r\nContent-Type: text/html\r\nContent-Length: %d\r\n\r\n%s", 
                     status, status_message(status), date, content_size, errorhtml);
         return 0;
     }
@@ -74,15 +79,14 @@ int build_response(es_connection *connection, char *response)
 
     generate_time(date);
 
-    if(strcmp((connection->request)->method, POST) == 0)// && get_value(connection->request->headers, "content-length") == 0)
+    if(strcmp((connection->request)->method, POST) == 0)
     {
         sprintf(response, 
                 "HTTP/1.1 %d %s\r\nConnection: %s\r\nDate: %s\r\nServer: %s\r\nContent-Type: %s\r\nLast-Modified:%s\r\n\r\n",
                 status, status_message(status),
-                "Keep-Alive",
+                conn,
                 date,
                 server,
-                //content_size,
                 content_type,
                 last_modified
                 );
@@ -93,7 +97,7 @@ int build_response(es_connection *connection, char *response)
         sprintf(response, 
                 "HTTP/1.1 %d %s\r\nConnection: %s\r\nDate: %s\r\nServer: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\nLast-Modified: %s\r\n\r\n",
                 status, status_message(status),
-                "Keep-Alive",
+                conn,
                 date,
                 server,
                 content_size,
@@ -105,7 +109,6 @@ int build_response(es_connection *connection, char *response)
     return 1;
 }
 
-// Working
 void parse_request_line(char *request_line, http_request *request)
 {
     if (sscanf(request_line, "%s %s %s", request->method, request->uri, request->version) == EOF)
@@ -131,7 +134,6 @@ void parse_request_line(char *request_line, http_request *request)
         }
         else
         {
-            printf("------1------\n");
             request->status = 400;
         }
         return;
@@ -143,7 +145,6 @@ void parse_request_line(char *request_line, http_request *request)
     }
 }
 
-// Working
 void parse_headers(char *headers, http_request *request)
 {
     char header[64];
@@ -171,7 +172,6 @@ void parse_headers(char *headers, http_request *request)
         {
             if (*(i+1) != ' ')
             {
-                printf("--------2--------\n");
                 request->status = 400;
                 return;
             }
@@ -198,7 +198,6 @@ void parse_headers(char *headers, http_request *request)
         }
         else if (c == '\r')
         {
-            printf("--------3--------\n");
             request->status = 400;
             return;
         }
@@ -261,7 +260,6 @@ int parse_body(char *request, http_request *request_wrapper)
     return 1;
 }
 
-// Working
 void parse_request(char *request, char *request_line, char * headers)
 {
     int i;
@@ -328,8 +326,6 @@ void determine_status(es_connection *connection)
             }
             else
             {
-                printf("--------4---------\n");
-                printf("method: %s\n", connection->request->method);
                 (connection->request)->status = 400;
             }
 
@@ -355,7 +351,6 @@ void determine_status(es_connection *connection)
             {
                 if (isdigit(*content_len) == 0)
                 {
-                    printf("--------5---------\n");
                     (connection->request)->status = 400;
                     return;
                 }
@@ -555,8 +550,7 @@ char *status_message(int status)
         case 599: message = "network connect timeout error";
                   break;
         default:
-                  message = "fuck";
-                  // think about what should be done for this part
+                  message = "Undefined status";
                   break;
     }
 

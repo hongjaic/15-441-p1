@@ -45,11 +45,7 @@ int port;
 int ssl_port;
 char *cgi;
 
-char* ARGV[] = {
-                    FILENAME,
-                    NULL
-               };
-
+char * ARGV[2];
 char *ENVP[23]; 
 
 int main(int argc, char* argv[])
@@ -69,11 +65,12 @@ int main(int argc, char* argv[])
     www = argv[5];
     cgi = argv[6];
 
+    ARGV[0] = cgi;
+    ARGV[1] = NULL;
+
     liso_engine_create(port, flog, flock);
 
     liso_logger_log("liso", "main", "liso select loop begin", port, engine.logger.loggerfd);
-
-    //signal(SIGCHLD, sigchld_handler);
 
     liso_engine_event_loop();
 

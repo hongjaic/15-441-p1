@@ -14,7 +14,6 @@ int link_contains_key(pair *ptr, char *key);
 uint32_t super_fast_hash(const char *data, int len);
 void string_tolower(char *str);
 
-/* Working */
 void init_hash(liso_hash *h)
 {
     int i;
@@ -27,7 +26,6 @@ void init_hash(liso_hash *h)
     h->num_headers = 0;
 }
 
-/* Working */
 int contains_key(liso_hash *h, char *key)
 {
     int hash_index;
@@ -44,7 +42,6 @@ int contains_key(liso_hash *h, char *key)
     return 1;
 }
 
-/* Working */
 int contains_value(liso_hash *h, char *value)
 {
     int i;
@@ -63,7 +60,6 @@ int contains_value(liso_hash *h, char *value)
     return 0;
 }
 
-/* Working */
 char *get_value(liso_hash *h, char *key)
 {
     int hash_index;
@@ -89,19 +85,12 @@ char *get_value(liso_hash *h, char *key)
     return NULL;
 }
 
-/* Working */
 int hash_add(liso_hash *h, char *key, char *value)
 {
     int hash_index = -1;
     pair *dom = NULL;
 
     string_tolower(key);
-    string_tolower(value);
-
-    if (contains_key(h, key))
-    {
-        return 0;
-    }
 
     hash_index = super_fast_hash(key, (int)strlen(key))%HASHSIZE;
 
@@ -128,7 +117,6 @@ int hash_add(liso_hash *h, char *key, char *value)
     return 1;
 }
 
-/* Working */
 int hash_remove(liso_hash *h, char *key)
 {
     int hash_index = super_fast_hash(key, (int)strlen(key))%HASHSIZE;
@@ -170,7 +158,6 @@ int hash_remove(liso_hash *h, char *key)
     return 0;
 }
 
-/* Working */
 int collapse(liso_hash *h)
 {
     if (h->num_headers == 0)
@@ -252,7 +239,6 @@ int link_contains_key(pair *ptr, char *key)
     return 0;
 }
 
-/* ask question about this */
 void remove_key_from_keyset(liso_hash *h, char *key)
 {
     int i;

@@ -9,23 +9,14 @@
 
 int cgi_init(es_connection *connection)
 {
-
-    //printf("CGI INI STARTED\n");
     pid_t pid;
 
     char *val;
     char path_info_s[2048];
     char request_uri_s[2048];
     char query_string_s[2048];
-
-    http_request *request = connection->request;
-    char *uri = request->uri;
-
-    parse_uri(uri, path_info_s, request_uri_s, query_string_s);
-
     char content_length[2048];
     char content_type[2048];
-    char gateway_interface[2048];
     char path_info[2048];
     char request_uri[2048];
     char query_string[2048];
@@ -41,6 +32,11 @@ int cgi_init(es_connection *connection)
     char http_cookie[2048];
     char http_user_agent[2048];
     char http_connection[2048];
+
+    http_request *request = connection->request;
+    char *uri = request->uri;
+
+    parse_uri(uri, path_info_s, request_uri_s, query_string_s);
 
     if (pipe(connection->stdin_pipe) < 0)
     {
@@ -63,7 +59,6 @@ int cgi_init(es_connection *connection)
         return pid;
     }
 
-
     if (pid == 0)
     {
         if ((val = get_value(connection->request->headers, "content-length")) != NULL)
@@ -73,7 +68,7 @@ int cgi_init(es_connection *connection)
         }
         else
         {
-            ENVP[0] = "CONTENT_LENGTH=";
+            ENVP[0] = "CONTENT_LENGTH=CGI/1.1";
         }
 
         if ((val = get_value(connection->request->headers, "content-type")) != NULL)
@@ -86,15 +81,7 @@ int cgi_init(es_connection *connection)
             ENVP[1] = "CONTENT_TYPE=";
         }
 
-        if ((val = get_value(connection->request->headers, "gateway-interface")) != NULL)
-        {
-            sprintf(gateway_interface, "%s%s", "GATEWAY_INTERFACE=", val);
-            ENVP[2] = gateway_interface;
-        }
-        else
-        {
-            ENVP[2] = "GATEWAY_INTERFACE=";
-        }
+        ENVP[2] = "GATEWAY_INTERFACE=";
 
         if (path_info_s != NULL)
         {
@@ -118,7 +105,7 @@ int cgi_init(es_connection *connection)
 
         sprintf(remote_addr, "%s%s", "REMOTE_ADDR=", connection->remote_ip);
         ENVP[5] = remote_addr;
-        
+
         if ((val = connection->request->method) != NULL)
         {
             sprintf(request_method, "%s%s", "REQUEST_METHOD=", val);
@@ -143,21 +130,23 @@ int cgi_init(es_connection *connection)
 
         if (connection->context != NULL)
         {
-            sprintf(server_port, "%s%d", "SERVER_PORT=", ssl_port);    
+            sprintf(server_port, "%s%d", "SERVER_PORT=", ssl_port);
+            ENVP[21] = "HTTPS=on";
         }
         else
         {
             sprintf(server_port, "%s%d", "SERVER_PORT=", port);
+            ENVP[21] = "HTTPS=off";
         }
 
         ENVP[9] = server_port;
 
 
-        ENVP[10] = "HTTP/1.1";
+        ENVP[10] = "SERVER_PROTOCOL=HTTP/1.1";
 
-        ENVP[11] = "Liso/1.0";
+        ENVP[11] = "SERVER_SOFTWARE=Liso/1.0";
 
-        if ((val = get_value(connection->request->headers, "http-accept")) != NULL)
+        if ((val = get_value(connection->request->headers, "accept")) != NULL)
         {
             sprintf(http_accept, "%s%s", "HTTP_ACCEPT=", val);
             ENVP[12] = http_accept;
@@ -167,7 +156,7 @@ int cgi_init(es_connection *connection)
             ENVP[12] = "HTTP_ACCEPT=";
         }
 
-        if ((val = get_value(connection->request->headers, "http-referer")) != NULL)
+        if ((val = get_value(connection->request->headers, "referer")) != NULL)
         {
             sprintf(http_referer, "%s%s", "HTTP_REFERER=", val);
             ENVP[13] = http_referer;
@@ -177,7 +166,7 @@ int cgi_init(es_connection *connection)
             ENVP[13] = "HTTP_REFERER=";
         }
 
-        if ((val = get_value(connection->request->headers, "http-accept-encoding")) != NULL)
+        if ((val = get_value(connection->request->headers, "accept-encoding")) != NULL)
         {
             sprintf(http_accept_encoding, "%s%s", "HTTP_ACCEPT_ENCODING=", val);
             ENVP[14] = http_accept_encoding;
@@ -187,7 +176,7 @@ int cgi_init(es_connection *connection)
             ENVP[14] = "HTTP_ACCEPT_ENCODING=";
         }
 
-        if ((val = get_value(connection->request->headers, "http-accept-language")) != NULL)
+        if ((val = get_value(connection->request->headers, "accept-language")) != NULL)
         {
             sprintf(http_accept_language, "%s%s", "HTTP_ACCEPT_LANGUAGE=", val);
             ENVP[15] = http_accept_language;
@@ -197,7 +186,7 @@ int cgi_init(es_connection *connection)
             ENVP[15] = "HTTP_ACCEPT_LANGUAGE=";
         }
 
-        if ((val = get_value(connection->request->headers, "http-accept-charset")) != NULL)
+        if ((val = get_value(connection->request->headers, "accept-charset")) != NULL)
         {
             sprintf(http_accept_charset, "%s%s", "HTTP_ACCEPT_CHARSET=", val);
             ENVP[16] = http_accept_charset;
@@ -207,7 +196,7 @@ int cgi_init(es_connection *connection)
             ENVP[16] = "HTTP_ACCEPT_CHARSET=";
         }
 
-        if ((val = get_value(connection->request->headers, "http-host")) != NULL)
+        if ((val = get_value(connection->request->headers, "host")) != NULL)
         {
             sprintf(http_host, "%s%s", "HTTP_HOST=", val);
             ENVP[17] = http_host;
@@ -217,7 +206,7 @@ int cgi_init(es_connection *connection)
             ENVP[17] = "HTTP_HOST=";
         }
 
-        if ((val = get_value(connection->request->headers, "http-cookie")) != NULL)
+        if ((val = get_value(connection->request->headers, "cookie")) != NULL)
         {
             sprintf(http_cookie, "%s%s", "HTTP_COOKIE=", val);
             ENVP[18] = http_cookie;
@@ -227,7 +216,7 @@ int cgi_init(es_connection *connection)
             ENVP[18] = "HTTP_COOKIE=";
         }
 
-        if ((val = get_value(connection->request->headers, "http-user-agent")) != NULL)
+        if ((val = get_value(connection->request->headers, "user-agent")) != NULL)
         {
             sprintf(http_user_agent, "%s%s", "HTTP_USER_AGENT=", val);
             ENVP[19] = http_user_agent;
@@ -237,7 +226,7 @@ int cgi_init(es_connection *connection)
             ENVP[19] = "HTTP_USER_AGENT=";
         }
 
-        if ((val = get_value(connection->request->headers, "http-connection")) != NULL)
+        if ((val = get_value(connection->request->headers, "connection")) != NULL)
         {
             sprintf(http_connection, "%s%s", "HTTP_CONNECTION=", val);
             ENVP[20] = http_connection;
@@ -254,8 +243,6 @@ int cgi_init(es_connection *connection)
 
         if(execve(cgi, ARGV, ENVP) < 0)
         {
-            printf("errno%d\n", errno);
-            //execve_error_handler();
             perror("execve");
             return -1;
         }
@@ -265,8 +252,10 @@ int cgi_init(es_connection *connection)
     {
         FD_SET((connection->stdout_pipe)[0], &(engine.wfds));
         if((connection->stdout_pipe)[0] > engine.fdmax) engine.fdmax = (connection->stdout_pipe)[0];
+        (engine.nfds)++;
         FD_SET((connection->stdin_pipe)[1], &(engine.rfds));
         if((connection->stdin_pipe)[1] >engine.fdmax) engine.fdmax = (connection->stdin_pipe)[1];
+        (engine.nfds)++;
 
         close((connection->stdout_pipe)[1]);
         close((connection->stdin_pipe)[0]);
@@ -283,7 +272,11 @@ int cgi_write(es_connection *connection, int writesize)
     {
         perror("write");
         FD_CLR((connection->stdout_pipe)[0], &(engine.wfds));
+        (engine.nfds)--;
         FD_CLR((connection->stdin_pipe)[1], &(engine.rfds));
+        (engine.nfds)--;
+        cgi_close_parent_pipe(connection);
+        liso_logger_log(ERROR, "cgi_write", "write returned a negative number", ssl_port, engine.logger.loggerfd);
         return -1;
     }
 
@@ -306,7 +299,14 @@ int cgi_send_response(es_connection *connection, int i)
 
     (connection->responseIndex) += read;
 
-    sent = send(i, connection->response, connection->responseIndex, MSG_NOSIGNAL);
+    if (connection->context == NULL)
+    {
+        sent = send(i, connection->response, connection->responseIndex, MSG_NOSIGNAL);
+    }
+    else
+    {
+        sent = SSL_write(connection->context, connection->response, connection->responseIndex);
+    }
 
     if (sent < 0)
     {
@@ -314,8 +314,14 @@ int cgi_send_response(es_connection *connection, int i)
 
         FD_CLR(i, &(engine.rfds));
         FD_CLR(i, &(engine.wfds));
-        FD_CLR((connection->stdout_pipe)[0], &(engine.wfds));
-        FD_CLR((connection->stdin_pipe)[1], &(engine.rfds));
+        cgi_close_parent_pipe(connection);
+        engine.nfds--;
+        engine.nfds--;
+
+        if (connection->context != NULL)
+        {
+            SSL_free(connection->context);
+        }
 
         cleanup_connection(connection);
         close_socket(i);
@@ -323,6 +329,11 @@ int cgi_send_response(es_connection *connection, int i)
         if (errnoSave != ECONNRESET && errnoSave != EPIPE)
         {
             close_socket(engine.sock);
+            close_socket(engine.ssl_sock);
+            SSL_free(connection->context);
+            SSL_CTX_free(engine.ssl_context);
+            liso_logger_log(ERROR, "cgi_send_response", "Undefined Error", ssl_port, engine.logger.loggerfd);
+            liso_logger_close(&(engine.logger));
             exit(EXIT_FAILURE);
         }
 
@@ -356,6 +367,8 @@ int cgi_read(es_connection *connection, char *buf)
     {
         FD_CLR((connection->stdout_pipe)[0], &(engine.wfds));
         FD_CLR((connection->stdin_pipe)[1], &(engine.rfds));
+        engine.nfds--;
+        engine.nfds--;
         perror("read");
         return -1;
     }
