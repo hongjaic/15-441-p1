@@ -79,6 +79,8 @@ int main(int argc, char* argv[])
     liso_engine_event_loop();
 
     close_socket(engine.sock);
+    close_socket(engine.ssl_sock);
+    SSL_CTX_free(engine.ssl_context);
 
     liso_logger_close(&(engine.logger));
 
