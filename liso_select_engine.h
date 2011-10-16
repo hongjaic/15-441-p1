@@ -58,6 +58,8 @@ extern liso_select_engine engine;
 extern char *www;
 extern int port;
 extern int ssl_port;
+extern char *key;
+extern char *cert;
 
 int liso_engine_create(int port, char *flog, char *flock);
 int liso_engine_event_loop();

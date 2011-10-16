@@ -858,7 +858,7 @@ void SSL_init()
         exit(EXIT_FAILURE);
     }
 
-    if (SSL_CTX_use_PrivateKey_file(engine.ssl_context, "./private/hongjaic2.key", SSL_FILETYPE_PEM) == 0)
+    if (SSL_CTX_use_PrivateKey_file(engine.ssl_context, key, SSL_FILETYPE_PEM) == 0)
     {
         SSL_CTX_free(engine.ssl_context);
         liso_logger_log(ERROR, "SSL_init", "Error associating private key.\n", port, engine.logger.loggerfd);
@@ -866,7 +866,7 @@ void SSL_init()
         exit(EXIT_FAILURE);
     }
 
-    if (SSL_CTX_use_certificate_file(engine.ssl_context, "./certs/hongjaic2.crt", SSL_FILETYPE_PEM) == 0)
+    if (SSL_CTX_use_certificate_file(engine.ssl_context, cert, SSL_FILETYPE_PEM) == 0)
     {
         SSL_CTX_free(engine.ssl_context);
         liso_logger_log(ERROR, "SSL_init", "Error associating certification.\n", port, engine.logger.loggerfd);
