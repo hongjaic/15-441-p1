@@ -33,7 +33,7 @@ int build_response(es_connection *connection, char *response)
 
     if (conn == NULL)
     {
-        conn = "Close";
+        conn = "Keep-Alive";
     }
 
     if((status = (connection->request)->status) == 0)
