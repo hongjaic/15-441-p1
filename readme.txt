@@ -62,3 +62,11 @@ of the loop the response message is sent.
 I have separate http paser, hash for parser, file io, and error handler, and
 logger modules.
 ----------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------
+CP3
+----------------------------------------------------------------------------------
+Description;
+The overall logic is the same as CP2 (however more robust and fixed a few
+bugs). The only thing that I did was to implement IO functions for SLL and CGI
+and put them where IO should be happening.

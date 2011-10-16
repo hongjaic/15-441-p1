@@ -55,3 +55,19 @@ nc localhost port < replay.test > replay.out
 4) Web-Sniffer (web-sniffer.net)
 Web sniffer provided a very handy webapp for testing the functionalities.
 ----------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------
+CP3
+----------------------------------------------------------------------------------
+Test execution plans:
+
+1) Web Browser
+I found that web browser often is the best way to test the server. With
+numerous web browers, I tested my server's SSL and CGI functionalities.
+
+2) Apache Bench
+Same as checkpoint 2. Apache Bench, I feel, is quite buggy and is outdated;
+however, it still is a good tool for stress tests.
+
+3) Necat
+I used netcat to test pipelining.

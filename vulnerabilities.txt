@@ -39,3 +39,14 @@ Right now, my POST request handling is a little buggy. I did not consider that
 the packets could be delayed, and just ignored requests that did not show
 somewhat ideal behaviors.
 ----------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------
+CP3
+----------------------------------------------------------------------------------
+Vulnerabilities:
+
+I have noticed using ab that there are sometimes IO errors (with -n 10000 -c
+1000 and file size much larger than buffer). I couldn't really do anything
+about it (retry logic would take much longer time to implement) and the error
+rate was always below 0.2%, so I didn't really do anything about it. However,
+I have the feeling that this my server's weakness.
